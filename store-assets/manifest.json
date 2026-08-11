@@ -1,0 +1,74 @@
+{
+  "product": "Спорт Пульс",
+  "locale": "ru-RU",
+  "generated_visual_sources": [
+    "store-assets/sources/feature-background-imagegen.png",
+    "store-assets/sources/screenshot-background-imagegen.png",
+    "app/src/main/res/drawable-nodpi/ic_launcher_mark_v2.png"
+  ],
+  "exports": [
+    {
+      "path": "store-assets/icon-512.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA",
+      "bytes": 229446
+    },
+    {
+      "path": "store-assets/feature-graphic-1024x500.png",
+      "width": 1024,
+      "height": 500,
+      "mode": "RGB",
+      "bytes": 738861
+    },
+    {
+      "path": "store-assets/screenshots/01-preview-matchday-typography-v259.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "bytes": 1303336
+    },
+    {
+      "path": "store-assets/screenshots/02-preview-analysis-typography-v259.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "bytes": 1449466
+    },
+    {
+      "path": "store-assets/screenshots/03-preview-ui-evidence-v257.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "bytes": 1125246
+    },
+    {
+      "path": "store-assets/screenshots/04-preview-verification-recipe-collapsed.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "bytes": 1168478
+    },
+    {
+      "path": "store-assets/screenshots/05-preview-ui-navigation-v257.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "bytes": 1337964
+    },
+    {
+      "path": "store-assets/screenshots/06-preview-analysis-guide-v256.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "bytes": 1153248
+    },
+    {
+      "path": "store-assets/preview/store-pack-overview.png",
+      "width": 1920,
+      "height": 1080,
+      "mode": "RGB",
+      "bytes": 1582265
+    }
+  ]
+}

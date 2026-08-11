@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sport-pulse.local/schemas/event-pack-envelope-v1.json",
+  "title": "Sport Pulse Event Pack Secure Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "envelopeVersion",
+    "keyId",
+    "algorithm",
+    "payloadEncoding",
+    "payload",
+    "signature"
+  ],
+  "properties": {
+    "envelopeVersion": {
+      "const": 1
+    },
+    "keyId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{3,64}$"
+    },
+    "algorithm": {
+      "const": "SHA256withRSA"
+    },
+    "payloadEncoding": {
+      "const": "base64"
+    },
+    "payload": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 349528,
+      "contentEncoding": "base64"
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 1024,
+      "contentEncoding": "base64"
+    }
+  }
+}
