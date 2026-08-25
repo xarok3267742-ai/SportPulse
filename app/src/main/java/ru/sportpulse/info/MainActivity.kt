@@ -15,6 +15,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -84,6 +85,8 @@ class MainActivity : Activity() {
         PulseWorkspaceMode.STORY
     private var activePulseLabSection =
         PulseLabSection.ROUTE
+    private var activeDecisionDeskSection =
+        DecisionDeskSection.DECISION
     private var pendingPulseFactor: SignalFactor? = null
     private var pendingPulseStoryAction: EventStoryAction? = null
     private var savedOnly = false
@@ -109,7 +112,7 @@ class MainActivity : Activity() {
 
     private val tabs = listOf(
         "Матчи",
-        "Анализ",
+        "Штаб",
         "Чек-листы",
         "Гид",
         "18+"
@@ -150,6 +153,12 @@ class MainActivity : Activity() {
                 STATE_PULSE_LAB_SECTION
             )
         )
+        activeDecisionDeskSection =
+            DecisionDeskSection.fromStored(
+                savedInstanceState?.getString(
+                    STATE_DECISION_DESK_SECTION
+                )
+            )
         savedOnly = savedInstanceState?.getBoolean(STATE_SAVED_ONLY, false) ?: false
         eventSearchQuery = savedInstanceState
             ?.getString(STATE_EVENT_SEARCH_QUERY)
@@ -285,6 +294,10 @@ class MainActivity : Activity() {
         outState.putString(
             STATE_PULSE_LAB_SECTION,
             activePulseLabSection.name
+        )
+        outState.putString(
+            STATE_DECISION_DESK_SECTION,
+            activeDecisionDeskSection.name
         )
         outState.putBoolean(STATE_SAVED_ONLY, savedOnly)
         outState.putString(
@@ -10738,12 +10751,1132 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun decisionDeskPanel(
+        event: SportEvent
+    ): LinearLayout {
+        val now = System.currentTimeMillis()
+        val assessment = state.assessment(event)
+        val evidence = state.evidence(event)
+        val timeline = state.evidenceTimelinePreview(
+            eventId = event.id,
+            now = now
+        )
+        val lens = MarketLensEngine.evaluate(
+            sport = event.sport,
+            assessment = assessment,
+            evidence = evidence,
+            timeline = timeline,
+            now = now
+        )
+        val storedDraft = state.decisionDeskDraft(event.id)
+        val suggestedMarket = lens.item(activeMarketLensKind)
+            ?.takeIf {
+                it.status != MarketLensStatus.NOT_APPLICABLE
+            }
+            ?.guide
+            ?.kind
+            ?: lens.items.firstOrNull {
+                it.status != MarketLensStatus.NOT_APPLICABLE
+            }?.guide?.kind
+            ?: activeMarketLensKind
+        val draft = storedDraft ?: DecisionDeskDraftFactory.create(
+            eventId = event.id,
+            marketKind = suggestedMarket,
+            thesis = "",
+            counterargument = "",
+            stopCondition = "",
+            updatedAt = now
+        )
+        activeMarketLensKind = draft.marketKind
+        val counterView = CounterViewEngine.evaluate(
+            assessment = assessment,
+            evidence = evidence,
+            review = state.counterReview(event.id)
+        )
+        val result = DecisionDeskEngine.evaluate(
+            draft = draft,
+            market = lens.item(draft.marketKind),
+            counterView = counterView
+        )
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                decisionDeskHero(result),
+                matchWrap()
+            )
+            addView(
+                decisionDeskSectionSwitcher(),
+                matchWrap(top = 10)
+            )
+            when (activeDecisionDeskSection) {
+                DecisionDeskSection.DECISION -> addView(
+                    decisionDeskDecisionPanel(
+                        event = event,
+                        draft = draft,
+                        result = result,
+                        lens = lens
+                    ),
+                    matchWrap(top = 10)
+                )
+                DecisionDeskSection.HISTORY -> addView(
+                    decisionDeskHistoryPanel(),
+                    matchWrap(top = 10)
+                )
+                DecisionDeskSection.PROFILE -> addView(
+                    decisionDeskProfilePanel(),
+                    matchWrap(top = 10)
+                )
+            }
+        }
+    }
+
+    private fun decisionDeskHero(
+        result: DecisionDeskResult
+    ): FrameLayout {
+        val tone = decisionDeskTone(result.status)
+        val height = if (
+            effectiveFontScale() >= 1.3f
+        ) {
+            268
+        } else {
+            226
+        }
+        return imageFrame().apply {
+            minimumHeight = dp(height)
+            addView(
+                ImageView(this@MainActivity).apply {
+                    setImageResource(
+                        R.drawable.decision_headquarters
+                    )
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    contentDescription =
+                        "Штаб проверки матча с пятью модулями фактов и красной стоп-линией"
+                },
+                frameMatch()
+            )
+            addView(
+                View(this@MainActivity).apply {
+                    background = gradientScrim(compact = false)
+                },
+                frameMatch()
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(
+                        label(
+                            result.status.title,
+                            tone.foreground,
+                            Color.WHITE
+                        )
+                    )
+                    addView(
+                        text(
+                            "Штаб решения",
+                            28f,
+                            Color.WHITE,
+                            Typeface.BOLD
+                        ).apply {
+                            maxLines = 2
+                        },
+                        matchWrap(top = 9)
+                    )
+                    addView(
+                        text(
+                            "Не угадывайте исход. Проверьте, выдержит ли идея матч.",
+                            14f,
+                            Color.rgb(218, 233, 231),
+                            Typeface.BOLD
+                        ).apply {
+                            maxLines = 3
+                        },
+                        matchWrap(top = 4)
+                    )
+                },
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM
+                ).apply {
+                    leftMargin = dp(16)
+                    rightMargin = dp(16)
+                    bottomMargin = dp(15)
+                }
+            )
+        }.also {
+            it.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(height)
+            )
+        }
+    }
+
+    private fun decisionDeskSectionSwitcher(): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            weightSum = DecisionDeskSection.values().size.toFloat()
+            background = rounded(AppColors.field, 8)
+            setPadding(dp(5), dp(5), dp(5), dp(5))
+            DecisionDeskSection.values().forEach { section ->
+                val selected = section == activeDecisionDeskSection
+                addView(
+                    text(
+                        section.title,
+                        13f,
+                        if (selected) {
+                            Color.WHITE
+                        } else {
+                            AppColors.fieldMuted
+                        },
+                        Typeface.BOLD
+                    ).apply {
+                        gravity = Gravity.CENTER
+                        minHeight = dp(44)
+                        maxLines = 2
+                        setPadding(dp(5), 0, dp(5), 0)
+                        background = rippleRounded(
+                            if (selected) {
+                                AppColors.signal
+                            } else {
+                                AppColors.field
+                            },
+                            5
+                        )
+                        isClickable = true
+                        isFocusable = true
+                        contentDescription =
+                            "Штаб: ${section.title}"
+                        setOnClickListener {
+                            if (section != activeDecisionDeskSection) {
+                                activeDecisionDeskSection = section
+                                renderContent()
+                            }
+                        }
+                    },
+                    LinearLayout.LayoutParams(
+                        0,
+                        dp(44),
+                        1f
+                    ).apply {
+                        if (
+                            section !=
+                            DecisionDeskSection.PROFILE
+                        ) {
+                            rightMargin = dp(4)
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    private fun decisionDeskDecisionPanel(
+        event: SportEvent,
+        draft: DecisionDeskDraft,
+        result: DecisionDeskResult,
+        lens: MarketLensResult
+    ): LinearLayout {
+        val panel = card()
+        val tone = decisionDeskTone(result.status)
+        lateinit var thesisInput: EditText
+        lateinit var counterargumentInput: EditText
+        lateinit var stopConditionInput: EditText
+        lateinit var marketScroller: HorizontalScrollView
+
+        panel.addView(
+            text(
+                result.headline,
+                22f,
+                tone.foreground,
+                Typeface.BOLD
+            ),
+            matchWrap()
+        )
+        panel.addView(
+            text(
+                result.explanation,
+                13.5f,
+                AppColors.ink
+            ),
+            matchWrap(top = 6)
+        )
+        panel.addView(
+            decisionDeskQuestionBand(
+                number = "01",
+                title = "Что изменилось?",
+                body = decisionDeskChangeSummary(event),
+                color = AppColors.signal
+            ),
+            matchWrap(top = 14)
+        )
+        panel.addView(
+            decisionDeskQuestionBand(
+                number = "02",
+                title = "Чего не хватает?",
+                body = decisionDeskMissingSummary(
+                    draft = draft,
+                    result = result
+                ),
+                color = tone.foreground
+            ),
+            matchWrap(top = 7)
+        )
+        panel.addView(
+            decisionDeskQuestionBand(
+                number = "03",
+                title = "Что делать сейчас?",
+                body = result.actionTitle,
+                color = AppColors.accentDark
+            ),
+            matchWrap(top = 7)
+        )
+
+        panel.addView(
+            text(
+                "ТИП ПРОВЕРКИ",
+                11f,
+                AppColors.muted,
+                Typeface.BOLD
+            ),
+            matchWrap(top = 18)
+        )
+        marketScroller = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            clipToPadding = false
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    lens.items.forEach { item ->
+                        val kind = item.guide.kind
+                        val selected = kind == draft.marketKind
+                        val applicable = item.status !=
+                            MarketLensStatus.NOT_APPLICABLE
+                        addView(
+                            text(
+                                kind.shortTitle,
+                                13f,
+                                if (selected) {
+                                    Color.WHITE
+                                } else if (applicable) {
+                                    AppColors.signal
+                                } else {
+                                    AppColors.muted
+                                },
+                                Typeface.BOLD
+                            ).apply {
+                                gravity = Gravity.CENTER
+                                minWidth = dp(64)
+                                minHeight = dp(42)
+                                setPadding(dp(12), 0, dp(12), 0)
+                                background = rippleRounded(
+                                    if (selected) {
+                                        AppColors.signal
+                                    } else {
+                                        AppColors.surface
+                                    },
+                                    8,
+                                    if (selected) {
+                                        AppColors.signal
+                                    } else {
+                                        AppColors.line
+                                    },
+                                    1
+                                )
+                                isEnabled = applicable
+                                alpha = if (applicable) 1f else 0.45f
+                                isClickable = applicable
+                                isFocusable = applicable
+                                contentDescription = if (applicable) {
+                                    "Тип проверки ${kind.shortTitle}"
+                                } else {
+                                    "${kind.shortTitle}: не подходит событию"
+                                }
+                                setOnClickListener {
+                                    val updated =
+                                        decisionDeskDraftFromInputs(
+                                            event = event,
+                                            marketKind = kind,
+                                            thesisInput = thesisInput,
+                                            counterargumentInput =
+                                                counterargumentInput,
+                                            stopConditionInput =
+                                                stopConditionInput
+                                        )
+                                    state.saveDecisionDeskDraft(updated)
+                                    activeMarketLensKind = kind
+                                    state.selectedMarketKind = kind
+                                    rerenderContentPreservingScroll()
+                                }
+                            },
+                            wrapWrap(right = 7)
+                        )
+                    }
+                }
+            )
+        }
+        panel.addView(marketScroller, matchWrap(top = 7))
+
+        thesisInput = decisionDeskInput(
+            value = draft.thesis,
+            hint = "Например: темп хозяев сохранится после перерыва",
+            maxLength = DecisionDeskDraft.MAX_THESIS_LENGTH
+        )
+        counterargumentInput = decisionDeskInput(
+            value = draft.counterargument,
+            hint = "Что сильнее всего может опровергнуть тезис?",
+            maxLength =
+                DecisionDeskDraft.MAX_COUNTERARGUMENT_LENGTH
+        )
+        stopConditionInput = decisionDeskInput(
+            value = draft.stopCondition,
+            hint = "Какой наблюдаемый факт сразу отменяет идею?",
+            maxLength =
+                DecisionDeskDraft.MAX_STOP_CONDITION_LENGTH
+        )
+        panel.addView(
+            decisionDeskInputBlock(
+                title = "Тезис",
+                input = thesisInput
+            ),
+            matchWrap(top = 16)
+        )
+        panel.addView(
+            decisionDeskInputBlock(
+                title = "Сильный контраргумент",
+                input = counterargumentInput
+            ),
+            matchWrap(top = 11)
+        )
+        panel.addView(
+            decisionDeskInputBlock(
+                title = "Условие отмены",
+                input = stopConditionInput
+            ),
+            matchWrap(top = 11)
+        )
+        panel.addView(
+            commandButton(
+                "Сохранить и пересчитать",
+                AppColors.signal
+            ) {
+                val updated = decisionDeskDraftFromInputs(
+                    event = event,
+                    marketKind = draft.marketKind,
+                    thesisInput = thesisInput,
+                    counterargumentInput = counterargumentInput,
+                    stopConditionInput = stopConditionInput
+                )
+                state.saveDecisionDeskDraft(updated)
+                hideKeyboard()
+                rerenderContentPreservingScroll()
+            },
+            matchWrap(top = 15)
+        )
+        panel.addView(
+            outlineButton(
+                result.actionTitle,
+                tone.foreground
+            ) {
+                when (result.missingFields.firstOrNull()) {
+                    DecisionDeskField.THESIS ->
+                        focusDecisionDeskInput(thesisInput)
+                    DecisionDeskField.COUNTERARGUMENT ->
+                        focusDecisionDeskInput(
+                            counterargumentInput
+                        )
+                    DecisionDeskField.STOP_CONDITION ->
+                        focusDecisionDeskInput(stopConditionInput)
+                    null -> {
+                        val updated =
+                            decisionDeskDraftFromInputs(
+                                event = event,
+                                marketKind = draft.marketKind,
+                                thesisInput = thesisInput,
+                                counterargumentInput =
+                                    counterargumentInput,
+                                stopConditionInput =
+                                    stopConditionInput
+                            )
+                        state.saveDecisionDeskDraft(updated)
+                        result.nextFactor?.let(::openPulseFactor)
+                            ?: openDecisionDeskLab(
+                                if (
+                                    result.status ==
+                                    DecisionDeskStatus.FACTS_READY
+                                ) {
+                                    PulseLabSection.DECISION
+                                } else {
+                                    PulseLabSection.FACTS
+                                }
+                            )
+                    }
+                }
+            },
+            matchWrap(top = 8)
+        )
+        if (state.decisionDeskDraft(event.id) != null) {
+            panel.addView(
+                text(
+                    "Замысел ${draft.shortFingerprint} • хранится только на устройстве.",
+                    11.5f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 9)
+            )
+        }
+        panel.addView(
+            decisionDeskGuidePanel(),
+            matchWrap(top = 16)
+        )
+        return panel
+    }
+
+    private fun decisionDeskQuestionBand(
+        number: String,
+        title: String,
+        body: String,
+        color: Int
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+            background = rounded(AppColors.background, 6)
+            setPadding(dp(11), dp(10), dp(11), dp(10))
+            addView(
+                text(
+                    number,
+                    11f,
+                    color,
+                    Typeface.BOLD
+                ).apply {
+                    gravity = Gravity.CENTER
+                    minWidth = dp(32)
+                    minHeight = dp(28)
+                    background = rounded(
+                        Color.TRANSPARENT,
+                        14,
+                        color,
+                        1
+                    )
+                },
+                wrapWrap(right = 10)
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(
+                        text(
+                            title,
+                            12f,
+                            AppColors.muted,
+                            Typeface.BOLD
+                        )
+                    )
+                    addView(
+                        text(
+                            body,
+                            14f,
+                            AppColors.ink,
+                            Typeface.BOLD
+                        ).apply {
+                            maxLines = 5
+                        },
+                        matchWrap(top = 2)
+                    )
+                },
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+        }
+    }
+
+    private fun decisionDeskInputBlock(
+        title: String,
+        input: EditText
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                text(
+                    title.uppercase(Locale.getDefault()),
+                    11f,
+                    AppColors.muted,
+                    Typeface.BOLD
+                )
+            )
+            addView(input, matchWrap(top = 6))
+        }
+    }
+
+    private fun decisionDeskInput(
+        value: String,
+        hint: String,
+        maxLength: Int
+    ): EditText {
+        return EditText(this).apply {
+            setText(value)
+            this.hint = hint
+            textSize = 14f
+            setTextColor(AppColors.ink)
+            setHintTextColor(AppColors.muted)
+            typeface = AppTypography.forText(
+                this@MainActivity,
+                Typeface.NORMAL
+            )
+            inputType = InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            gravity = Gravity.TOP or Gravity.START
+            minLines = 2
+            maxLines = 5
+            isVerticalScrollBarEnabled = true
+            filters = arrayOf(InputFilter.LengthFilter(maxLength))
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+            background = rounded(
+                AppColors.background,
+                7,
+                AppColors.line,
+                1
+            )
+        }
+    }
+
+    private fun decisionDeskDraftFromInputs(
+        event: SportEvent,
+        marketKind: MarketKind,
+        thesisInput: EditText,
+        counterargumentInput: EditText,
+        stopConditionInput: EditText
+    ): DecisionDeskDraft {
+        return DecisionDeskDraftFactory.create(
+            eventId = event.id,
+            marketKind = marketKind,
+            thesis = thesisInput.text?.toString().orEmpty(),
+            counterargument =
+                counterargumentInput.text?.toString().orEmpty(),
+            stopCondition =
+                stopConditionInput.text?.toString().orEmpty(),
+            updatedAt = System.currentTimeMillis()
+        )
+    }
+
+    private fun decisionDeskHistoryPanel(): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                card().apply {
+                    addView(
+                        text(
+                            "История процесса, а не выигрышей",
+                            20f,
+                            AppColors.ink,
+                            Typeface.BOLD
+                        )
+                    )
+                    addView(
+                        text(
+                            "Здесь видны решения, принятые до события. Коэффициенты, суммы и результат матча в журнал не входят.",
+                            13f,
+                            AppColors.muted
+                        ),
+                        matchWrap(top = 5)
+                    )
+                }
+            )
+            addView(
+                decisionLedgerPanel(),
+                matchWrap(top = 10)
+            )
+        }
+    }
+
+    private fun decisionDeskProfilePanel(): LinearLayout {
+        val read = state.decisionLedger()
+        val ledger = read.ledger
+        val profile = ledger?.let {
+            DecisionDeskProfileEngine.create(
+                ledger = it,
+                reviewedEvents = state.calibrationRecords().size
+            )
+        }
+        return card().apply {
+            addView(
+                text(
+                    "Профиль процесса",
+                    22f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                )
+            )
+            addView(
+                text(
+                    "Оценивает дисциплину проверки, а не доходность и не точность угадывания исходов.",
+                    13f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 5)
+            )
+            if (
+                read.integrity ==
+                DecisionLedgerIntegrity.TAMPERED ||
+                profile == null
+            ) {
+                addView(
+                    text(
+                        "Журнал недоступен: локальная цепочка не прошла проверку целостности.",
+                        14f,
+                        AppColors.danger,
+                        Typeface.BOLD
+                    ).apply {
+                        background = rounded(
+                            AppColors.dangerSoft,
+                            7
+                        )
+                        setPadding(
+                            dp(12),
+                            dp(11),
+                            dp(12),
+                            dp(11)
+                        )
+                    },
+                    matchWrap(top = 14)
+                )
+                return@apply
+            }
+            val stack =
+                resources.configuration.screenWidthDp < 380 ||
+                    effectiveFontScale() >= 1.3f
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = if (stack) {
+                        LinearLayout.VERTICAL
+                    } else {
+                        LinearLayout.HORIZONTAL
+                    }
+                    addView(
+                        decisionDeskProfileMetric(
+                            value = profile.totalDecisions.toString(),
+                            title = "решений в журнале",
+                            color = AppColors.signal
+                        ),
+                        if (stack) {
+                            matchWrap()
+                        } else {
+                            LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f
+                            ).apply { rightMargin = dp(7) }
+                        }
+                    )
+                    addView(
+                        decisionDeskProfileMetric(
+                            value = profile.reviewedEvents.toString(),
+                            title = "разборов после матча",
+                            color = AppColors.accentDark
+                        ),
+                        if (stack) {
+                            matchWrap(top = 7)
+                        } else {
+                            LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f
+                            )
+                        }
+                    )
+                },
+                matchWrap(top = 14)
+            )
+            addView(
+                text(
+                    "ПОСЛЕДНИЕ ${profile.visibleDecisionCount}",
+                    11f,
+                    AppColors.muted,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 17)
+            )
+            addView(
+                decisionDeskProfileBar(
+                    title = "Стоп",
+                    count = profile.stopCount,
+                    total = profile.visibleDecisionCount,
+                    color = AppColors.danger
+                ),
+                matchWrap(top = 8)
+            )
+            addView(
+                decisionDeskProfileBar(
+                    title = "Наблюдать",
+                    count = profile.observeCount,
+                    total = profile.visibleDecisionCount,
+                    color = AppColors.warning
+                ),
+                matchWrap(top = 9)
+            )
+            addView(
+                decisionDeskProfileBar(
+                    title = "Факты готовы",
+                    count = profile.readyCount,
+                    total = profile.visibleDecisionCount,
+                    color = AppColors.accent
+                ),
+                matchWrap(top = 9)
+            )
+            val insight = when {
+                profile.visibleDecisionCount == 0 ->
+                    "Профиль появится после первого предстартового решения."
+                profile.cautiousShare >= 60 ->
+                    "Вы чаще оставляете идею на уровне «Стоп» или «Наблюдать». Это показывает осторожность процесса, но качество видно только после ретроспектив."
+                else ->
+                    "Вы часто доходите до статуса «Факты готовы». Проверьте в ретроспективах, не пропускаете ли сильные контраргументы."
+            }
+            addView(
+                text(
+                    insight,
+                    13f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                ).apply {
+                    background = rounded(
+                        AppColors.signalSoft,
+                        7
+                    )
+                    setPadding(
+                        dp(12),
+                        dp(11),
+                        dp(12),
+                        dp(11)
+                    )
+                },
+                matchWrap(top = 15)
+            )
+            addView(
+                outlineButton(
+                    "Открыть историю решений",
+                    AppColors.signal
+                ) {
+                    activeDecisionDeskSection =
+                        DecisionDeskSection.HISTORY
+                    renderContent()
+                },
+                matchWrap(top = 12)
+            )
+        }
+    }
+
+    private fun decisionDeskProfileMetric(
+        value: String,
+        title: String,
+        color: Int
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(AppColors.background, 6)
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+            addView(
+                text(
+                    value,
+                    25f,
+                    color,
+                    Typeface.BOLD
+                )
+            )
+            addView(
+                text(
+                    title,
+                    12f,
+                    AppColors.muted,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 1)
+            )
+        }
+    }
+
+    private fun decisionDeskProfileBar(
+        title: String,
+        count: Int,
+        total: Int,
+        color: Int
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(
+                        text(
+                            title,
+                            13f,
+                            AppColors.ink,
+                            Typeface.BOLD
+                        ),
+                        LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1f
+                        )
+                    )
+                    addView(
+                        text(
+                            count.toString(),
+                            13f,
+                            color,
+                            Typeface.BOLD
+                        )
+                    )
+                }
+            )
+            addView(
+                horizontalProgress().apply {
+                    max = total.coerceAtLeast(1)
+                    progress = count
+                    progressTintList =
+                        ColorStateList.valueOf(color)
+                },
+                matchFixed(7, top = 5)
+            )
+        }
+    }
+
+    private fun decisionDeskGuidePanel(): LinearLayout {
+        val steps = listOf(
+            "Выберите тип проверки",
+            "Сформулируйте тезис",
+            "Запишите сильный контраргумент",
+            "Задайте наблюдаемое условие отмены",
+            "Проверьте пять факторов и зафиксируйте статус"
+        )
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(
+                AppColors.field,
+                7
+            )
+            setPadding(dp(13), dp(13), dp(13), dp(13))
+            addView(
+                text(
+                    "МАРШРУТ ШТАБА",
+                    11f,
+                    AppColors.fieldSignal,
+                    Typeface.BOLD
+                )
+            )
+            addView(
+                text(
+                    "Пять шагов до проверяемого решения",
+                    17f,
+                    Color.WHITE,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 3)
+            )
+            steps.forEachIndexed { index, step ->
+                addView(
+                    LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.TOP
+                        addView(
+                            text(
+                                (index + 1).toString(),
+                                11f,
+                                Color.WHITE,
+                                Typeface.BOLD
+                            ).apply {
+                                gravity = Gravity.CENTER
+                                minWidth = dp(25)
+                                minHeight = dp(25)
+                                background = rounded(
+                                    AppColors.signal,
+                                    13
+                                )
+                            },
+                            wrapWrap(right = 9)
+                        )
+                        addView(
+                            text(
+                                step,
+                                13f,
+                                Color.WHITE,
+                                Typeface.BOLD
+                            ),
+                            LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f
+                            )
+                        )
+                    },
+                    matchWrap(top = if (index == 0) 11 else 8)
+                )
+            }
+            addView(
+                outlineButton(
+                    "Открыть полный гид",
+                    AppColors.fieldSignal
+                ) {
+                    selectTab(3)
+                }.apply {
+                    setTextColor(Color.WHITE)
+                    background = rippleRounded(
+                        AppColors.fieldRaised,
+                        7,
+                        AppColors.fieldSignal,
+                        1
+                    )
+                },
+                matchWrap(top = 13)
+            )
+        }
+    }
+
+    private fun decisionDeskChangeSummary(
+        event: SportEvent
+    ): String {
+        val fixtureId = event.providerRef?.toLongOrNull()
+        val apiChange = fixtureId?.let { id ->
+            apiFootballDelta?.changes?.firstOrNull {
+                it.fixtureId == id
+            }
+        }
+        if (apiChange != null) {
+            return apiChange.kinds.joinToString(" • ") { kind ->
+                when (kind) {
+                    ApiFootballChangeKind.SCORE ->
+                        "обновлён счёт"
+                    ApiFootballChangeKind.STATUS ->
+                        "изменился статус"
+                    ApiFootballChangeKind.START_TIME ->
+                        "перенесено время"
+                    ApiFootballChangeKind.NEW_IN_FEED ->
+                        "матч появился в ленте"
+                    ApiFootballChangeKind.MISSING_FROM_FEED ->
+                        "матч исчез из ленты"
+                }
+            }.replaceFirstChar { it.uppercase() }
+        }
+        val packageChange = eventPackageDelta?.changes
+            ?.firstOrNull { it.eventId == event.id }
+        if (packageChange != null) {
+            val details = buildList {
+                if (packageChange.isRescheduled) {
+                    add("перенесено время")
+                }
+                if (packageChange.assessmentChanges.isNotEmpty()) {
+                    add("изменена карта факторов")
+                }
+                if (packageChange.detailChanges.isNotEmpty()) {
+                    add("обновлены детали")
+                }
+                packageChange.presence?.let {
+                    add("изменился состав ленты")
+                }
+            }
+            if (details.isNotEmpty()) {
+                return details.joinToString(" • ")
+                    .replaceFirstChar { it.uppercase() }
+            }
+        }
+        return when (event.origin) {
+            SportEventOrigin.API_SPORTS ->
+                "После последней синхронизации заметных изменений нет."
+            SportEventOrigin.EVENT_PACKAGE ->
+                "В последнем пакете заметных изменений нет."
+            SportEventOrigin.DEMO ->
+                "Внешних обновлений нет: проверьте свежесть источников вручную."
+        }
+    }
+
+    private fun decisionDeskMissingSummary(
+        draft: DecisionDeskDraft,
+        result: DecisionDeskResult
+    ): String {
+        result.missingFields.firstOrNull()?.let {
+            return "Не заполнено: ${it.title}."
+        }
+        if (
+            result.marketStatus ==
+            MarketLensStatus.NOT_APPLICABLE
+        ) {
+            return "Выбранный тип рынка не подходит этому виду спорта."
+        }
+        result.nextFactor?.let {
+            return "Нужна проверка: ${it.title.lowercase(Locale.getDefault())}."
+        }
+        return when (result.status) {
+            DecisionDeskStatus.STOP ->
+                "Не пройдена независимая проверка тезиса."
+            DecisionDeskStatus.OBSERVE ->
+                "Нужно разрешить спор между фактами."
+            DecisionDeskStatus.FACTS_READY ->
+                "Критических пробелов сейчас нет."
+        }
+    }
+
+    private fun decisionDeskTone(
+        status: DecisionDeskStatus
+    ): Tone {
+        return when (status) {
+            DecisionDeskStatus.STOP ->
+                Tone(AppColors.danger, AppColors.dangerSoft)
+            DecisionDeskStatus.OBSERVE ->
+                Tone(AppColors.warning, AppColors.warningSoft)
+            DecisionDeskStatus.FACTS_READY ->
+                Tone(AppColors.accent, AppColors.accentSoft)
+        }
+    }
+
+    private fun focusDecisionDeskInput(input: EditText) {
+        input.requestFocus()
+        input.post {
+            val manager = getSystemService(
+                INPUT_METHOD_SERVICE
+            ) as InputMethodManager
+            manager.showSoftInput(
+                input,
+                InputMethodManager.SHOW_IMPLICIT
+            )
+        }
+    }
+
+    private fun hideKeyboard() {
+        currentFocus?.windowToken?.let { token ->
+            val manager = getSystemService(
+                INPUT_METHOD_SERVICE
+            ) as InputMethodManager
+            manager.hideSoftInputFromWindow(token, 0)
+        }
+    }
+
+    private fun openDecisionDeskLab(
+        section: PulseLabSection
+    ) {
+        activeDecisionDeskSection =
+            DecisionDeskSection.DECISION
+        activePulseWorkspaceMode = PulseWorkspaceMode.LAB
+        activePulseLabSection = section
+        state.selectedPulseWorkspaceMode =
+            PulseWorkspaceMode.LAB
+        pendingPulseFactor = null
+        pendingPulseStoryAction = null
+        selectTab(1, scrollToContent = false)
+        pulseLabNavigatorAnchor?.let { target ->
+            scrollToAppView(target, topOffsetDp = 10)
+        }
+    }
+
     private fun renderPulse() {
         pulseLabNavigatorAnchor = null
         content.addView(
             sectionTitle(
-                "Анализ матча",
-                "Сначала состояние пяти факторов и один следующий шаг. Без вероятности исхода и советов по ставке."
+                "Штаб решения",
+                "Тезис, контраргумент, условие отмены и один следующий шаг. Без вероятности исхода и советов по ставке."
             )
         )
 
@@ -10754,6 +11887,16 @@ class MainActivity : Activity() {
             checkNotNull(analysisEventAnchor),
             matchWrap(top = 12)
         )
+        content.addView(
+            decisionDeskPanel(event),
+            matchWrap(top = 12)
+        )
+        if (
+            activeDecisionDeskSection !=
+            DecisionDeskSection.DECISION
+        ) {
+            return
+        }
         content.addView(plainAnalyticsPanel(event), matchWrap(top = 12))
         if (
             activePulseWorkspaceMode ==
@@ -12476,9 +13619,61 @@ class MainActivity : Activity() {
     private fun analysisEventHeader(event: SportEvent): LinearLayout {
         val now = System.currentTimeMillis()
         val compactChangeAction =
-            resources.configuration.fontScale >= 1.3f ||
+            effectiveFontScale() >= 1.3f ||
                 resources.configuration.screenWidthDp < 380
+        val eventDetails = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                text(
+                    event.match,
+                    23f,
+                    Color.WHITE,
+                    Typeface.BOLD
+                ).apply {
+                    setTextSize(
+                        TypedValue.COMPLEX_UNIT_PX,
+                        23f *
+                            resources.displayMetrics.density *
+                            min(effectiveFontScale(), 1.25f)
+                    )
+                },
+                matchWrap()
+            )
+            addView(
+                text(
+                    "${event.tournament} • ${event.region}",
+                    12.5f,
+                    Color.rgb(219, 229, 226)
+                ),
+                matchWrap(top = 5)
+            )
+            addView(
+                text(
+                    TimeBridgeEngine.formatEventTime(
+                        event = event,
+                        selectedZone = state.selectedRegionalZone,
+                        referenceMillis = now
+                    ),
+                    13.5f,
+                    Color.WHITE,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 5)
+            )
+            event.providerStatus?.let { status ->
+                addView(
+                    text(
+                        "Статус: $status",
+                        12f,
+                        Color.rgb(142, 232, 207),
+                        Typeface.BOLD
+                    ),
+                    matchWrap(top = 3)
+                )
+            }
+        }
         val frame = imageFrame().apply {
+            minimumHeight = dp(180)
             addView(
                 ImageView(this@MainActivity).apply {
                     setImageResource(event.imageRes)
@@ -12547,67 +13742,27 @@ class MainActivity : Activity() {
                     topMargin = dp(14)
                 }
             )
-            addView(
-                LinearLayout(this@MainActivity).apply {
-                    orientation = LinearLayout.VERTICAL
-                    addView(
-                        text(
-                            event.match,
-                            23f,
-                            Color.WHITE,
-                            Typeface.BOLD
-                        ),
-                        matchWrap()
-                    )
-                    addView(
-                        text(
-                            "${event.tournament} • ${event.region}",
-                            12.5f,
-                            Color.rgb(219, 229, 226)
-                        ),
-                        matchWrap(top = 5)
-                    )
-                    addView(
-                        text(
-                            TimeBridgeEngine.formatEventTime(
-                                event = event,
-                                selectedZone = state.selectedRegionalZone,
-                                referenceMillis = now
-                            ),
-                            13.5f,
-                            Color.WHITE,
-                            Typeface.BOLD
-                        ),
-                        matchWrap(top = 5)
-                    )
-                    event.providerStatus?.let { status ->
-                        addView(
-                            text(
-                                "Статус: $status",
-                                12f,
-                                Color.rgb(142, 232, 207),
-                                Typeface.BOLD
-                            ),
-                            matchWrap(top = 3)
-                        )
-                    }
-                },
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.BOTTOM
-                ).apply {
-                    leftMargin = dp(16)
-                    rightMargin = dp(16)
-                    bottomMargin = dp(16)
-                }
-            )
         }
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(
                 frame,
-                matchFixed(analysisEventHeaderHeightDp(event))
+                matchWrap()
+            )
+            addView(
+                eventDetails.apply {
+                    background = rounded(
+                        AppColors.field,
+                        8
+                    )
+                    setPadding(
+                        dp(16),
+                        dp(14),
+                        dp(16),
+                        dp(14)
+                    )
+                },
+                matchWrap(top = 6)
             )
             feedTimelineExplanationBand(
                 event = event,
@@ -12638,24 +13793,6 @@ class MainActivity : Activity() {
                     matchWrap(top = 8)
                 )
             }
-        }
-    }
-
-    private fun analysisEventHeaderHeightDp(event: SportEvent): Int {
-        val fontScale = resources.configuration.fontScale
-        val narrow = resources.configuration.screenWidthDp < 380
-        return when {
-            fontScale >= 1.8f && narrow && event.match.length > 72 -> 600
-            fontScale >= 1.8f && narrow && event.match.length > 42 -> 560
-            fontScale >= 1.8f && narrow -> 530
-            fontScale >= 1.8f && event.match.length > 72 -> 530
-            fontScale >= 1.8f && event.match.length > 42 -> 510
-            fontScale >= 1.8f -> 480
-            fontScale >= 1.3f && narrow -> 370
-            fontScale >= 1.3f -> 330
-            event.match.length > 72 -> 264
-            event.match.length > 42 -> 232
-            else -> 204
         }
     }
 
@@ -20106,14 +21243,22 @@ class MainActivity : Activity() {
             addView(
                 guideStepRow(
                     number = "2",
-                    title = "Прочитайте карту данных",
-                    body = "«Анализ» покажет состояние каждого из пяти факторов, выделит главный пробел и оставит один следующий шаг."
+                    title = "Соберите замысел",
+                    body = "В «Штабе» выберите тип проверки, запишите тезис, сильный контраргумент и наблюдаемое условие отмены."
                 ),
                 matchWrap(top = 10)
             )
             addView(
                 guideStepRow(
                     number = "3",
+                    title = "Прочитайте статус",
+                    body = "Три строки объяснят, что изменилось, чего не хватает и что делать сейчас. Статус всегда закрывается при критическом пробеле."
+                ),
+                matchWrap(top = 10)
+            )
+            addView(
+                guideStepRow(
+                    number = "4",
                     title = "Проверьте один пробел",
                     body = "Запишите один проверяемый факт и его источник. Для независимой сверки добавьте второй источник с другим происхождением."
                 ),
@@ -20121,7 +21266,7 @@ class MainActivity : Activity() {
             )
             addView(
                 guideStepRow(
-                    number = "4",
+                    number = "5",
                     title = "Зафиксируйте решение",
                     body = "Выберите «Пропустить», «Наблюдать» или «Факты сверены». Это оценка качества проверки, не прогноз и не совет сделать ставку."
                 ),
@@ -20181,10 +21326,17 @@ class MainActivity : Activity() {
             addView(text("Словарь экрана", 20f, AppColors.ink, Typeface.BOLD))
             addView(
                 dictionaryRow(
+                    "Штаб решения",
+                    "Единый маршрут матча: тип проверки, тезис, контраргумент, условие отмены и текущий статус. Вкладки «История» и «Профиль» оценивают процесс без коэффициентов, сумм и доходности."
+                ),
+                matchWrap(top = 11)
+            )
+            addView(
+                dictionaryRow(
                     "Карта данных",
                     "Пять строк формы, состава, нагрузки, контекста и источников. Статус показывает отсутствие факта, один источник, независимую сверку или истёкший срок. Выделение означает только следующий шаг проверки, а не прогноз."
                 ),
-                matchWrap(top = 11)
+                matchWrap(top = 9)
             )
             addView(
                 dictionaryRow(
@@ -20407,17 +21559,22 @@ class MainActivity : Activity() {
                 "Время и статус берутся из расписания. Перед решением всё равно сверьте их с официальным источником."
             ),
             Triple(
-                "2. Прочитайте карту данных",
-                "В «Анализе» пять строк показывают состояние формы, состава, нагрузки, контекста и источников. Выделенная строка — следующий шаг.",
-                "Статусы показывают наличие и свежесть источников. Они не показывают шанс победы."
+                "2. Соберите замысел",
+                "В «Штабе» выберите тип проверки, запишите тезис, сильный контраргумент и условие, которое сразу отменит идею.",
+                "Незаполненный замысел получает статус «Стоп»: его нельзя честно проверить после матча."
             ),
             Triple(
-                "3. Закройте один пробел",
+                "3. Прочитайте статус",
+                "Штаб отвечает на три вопроса: что изменилось, чего не хватает и что делать сейчас. Ниже карта показывает пять факторов.",
+                "Статусы показывают качество и свежесть проверки. Они не показывают шанс победы."
+            ),
+            Triple(
+                "4. Закройте один пробел",
                 "Запишите один проверяемый факт и его источник. Для независимой сверки добавьте второй источник, который не повторяет ту же публикацию.",
                 "Если источники расходятся или устарели, приложение оставит стоп-сигнал и предложит перепроверку."
             ),
             Triple(
-                "4. Зафиксируйте решение",
+                "5. Зафиксируйте решение",
                 "Выберите «Пропустить», «Наблюдать» или «Факты сверены». После события проверьте, какие исходные факты подтвердились, а какие нет.",
                 "Это журнал качества проверки. Приложение не рассчитывает вероятность, ожидаемую выгоду или размер ставки."
             )
@@ -20536,7 +21693,7 @@ class MainActivity : Activity() {
         content.addView(
             sectionTitle(
                 "Как пользоваться",
-                "Четыре шага от выбора матча до понятного решения."
+                "Пять шагов от выбора матча до проверяемого решения."
             )
         )
         content.addView(quickStartGuidePanel(), matchWrap(top = 12))
@@ -23144,6 +24301,24 @@ class MainActivity : Activity() {
         return (value * resources.displayMetrics.density).toInt()
     }
 
+    private fun effectiveFontScale(): Float {
+        val metrics = resources.displayMetrics
+        val metricsScale = if (metrics.density > 0f) {
+            TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP,
+                1f,
+                metrics
+            ) / metrics.density
+        } else {
+            1f
+        }
+        return maxOf(
+            1f,
+            resources.configuration.fontScale,
+            metricsScale
+        )
+    }
+
     private fun heroHeightDp(): Int {
         val configuration = resources.configuration
         return when {
@@ -23394,6 +24569,8 @@ class MainActivity : Activity() {
             "pulse_workspace_mode"
         const val STATE_PULSE_LAB_SECTION =
             "pulse_lab_section"
+        const val STATE_DECISION_DESK_SECTION =
+            "decision_desk_section"
         const val STATE_UPDATE_RADAR_EXPANDED =
             "update_radar_expanded"
         const val STATE_DECISION_LEDGER_EXPANDED =

@@ -631,6 +631,30 @@ internal class UserStateStore(context: Context) {
             ?.takeIf { it.eventId == eventId }
     }
 
+    fun decisionDeskDraft(eventId: String): DecisionDeskDraft? {
+        val encoded = preferences.getString(
+            decisionDeskDraftKey(eventId),
+            null
+        ) ?: return null
+        return DecisionDeskDraftCodec.decode(encoded)
+            ?.takeIf { it.eventId == eventId }
+    }
+
+    fun saveDecisionDeskDraft(draft: DecisionDeskDraft) {
+        preferences.edit()
+            .putString(
+                decisionDeskDraftKey(draft.eventId),
+                DecisionDeskDraftCodec.encode(draft)
+            )
+            .apply()
+    }
+
+    fun clearDecisionDeskDraft(eventId: String) {
+        preferences.edit()
+            .remove(decisionDeskDraftKey(eventId))
+            .apply()
+    }
+
     fun decisionGuardBreach(
         eventId: String
     ): DecisionGuardBreach? {
@@ -1059,6 +1083,10 @@ internal class UserStateStore(context: Context) {
         return "decision_snapshot_$eventId"
     }
 
+    private fun decisionDeskDraftKey(eventId: String): String {
+        return "$DECISION_DESK_DRAFT_PREFIX$eventId"
+    }
+
     private fun decisionGuardBreachKey(
         eventId: String
     ): String {
@@ -1090,6 +1118,8 @@ internal class UserStateStore(context: Context) {
         const val STORY_CHECKPOINT_PREFIX =
             "story_checkpoint_"
         const val STORY_THREAD_PREFIX = "story_thread_"
+        const val DECISION_DESK_DRAFT_PREFIX =
+            "decision_desk_draft_"
         const val KEY_DATA_DUEL_OPPONENT =
             "data_duel_opponent"
         const val KEY_MARKET_LENS_KIND =

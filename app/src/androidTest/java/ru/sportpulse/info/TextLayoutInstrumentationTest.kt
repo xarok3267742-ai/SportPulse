@@ -165,7 +165,7 @@ class TextLayoutInstrumentationTest {
         )
         audit("Лента / Требуют проверки", failures)
         clickText("Открыть короткий разбор")
-        assertTextPresent("Анализ матча")
+        assertTextPresent("Штаб решения")
         assertTextPresent("Карта данных")
         assertContentDescriptionStartingWith("Схема доказательств. ")
         assertTextAndDescriptionDoNotOverlap(
@@ -174,8 +174,8 @@ class TextLayoutInstrumentationTest {
         )
         if (defaultFontScale) {
             assertTextVisibleOnScreen(
-                "Карта данных",
-                "на первом экране анализа"
+                "ОНЛАЙН • ДОСЬЕ",
+                "на первом экране события"
             )
         }
         assertTextPresent("ПОЧЕМУ ЗДЕСЬ • ПЕРЕНОС")
@@ -219,7 +219,7 @@ class TextLayoutInstrumentationTest {
         assertTextPresent("СОВПАДЕНИЕ • КОМАНДА")
         audit("Лента / Поиск латиницей", failures)
         clickText("Открыть короткий разбор")
-        assertTextPresent("Анализ матча")
+        assertTextPresent("Штаб решения")
         assertTextPresent("Карта данных")
         assertTextPresent("Показать 3 шага проверки")
         assertTextAbsent("Первичный факт")
@@ -237,7 +237,17 @@ class TextLayoutInstrumentationTest {
         audit("Лента / Инструменты", failures)
         clickText("Показать ещё 1")
         audit("Лента / Пульс обновления", failures)
-        clickTab("Анализ")
+        clickTab("Штаб")
+        assertTextPresent("Замысел ещё не проверяем")
+        assertTextPresent("Что изменилось?")
+        audit("Штаб / Решение", failures)
+        clickContentDescription("Штаб: История")
+        assertTextPresent("История процесса, а не выигрышей")
+        audit("Штаб / История", failures)
+        clickContentDescription("Штаб: Профиль")
+        assertTextPresent("Профиль процесса")
+        audit("Штаб / Профиль", failures)
+        clickContentDescription("Штаб: Решение")
         assertTextPresent("КОРОТКО • ИТОГ И ОДИН ШАГ")
         audit("Пульс / Сюжет", failures)
         assertContextFixtureExpired()
@@ -656,7 +666,8 @@ class TextLayoutInstrumentationTest {
             failures +=
                 "$screen: height ${layout.height}>$availableHeight " +
                     "lines=${layout.lineCount} size=${view.width}x${view.height} " +
-                    "at=${view.left},${view.top} ${viewPath(view)}: " +
+                    "at=${view.left},${view.top} " +
+                    "${viewPath(view)}: " +
                     label
         }
         val lastLine = layout.lineCount - 1
@@ -792,7 +803,7 @@ class TextLayoutInstrumentationTest {
         const val TOLERANCE_PX = 2
         val NAVIGATION_TITLES = listOf(
             "Матчи",
-            "Анализ",
+            "Штаб",
             "Чек-листы",
             "Гид",
             "18+"

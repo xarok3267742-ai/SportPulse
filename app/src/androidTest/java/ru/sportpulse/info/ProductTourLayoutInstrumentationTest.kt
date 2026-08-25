@@ -47,11 +47,11 @@ class ProductTourLayoutInstrumentationTest {
         assertCompletelyVisible("Выйти")
         clickText("Мне есть 18 лет")
 
-        repeat(4) { index ->
+        repeat(5) { index ->
             val step = index + 1
-            waitForText("ШАГ $step ИЗ 4")
+            waitForText("ШАГ $step ИЗ 5")
             audit("Обучение / шаг $step", failures)
-            val action = if (step == 4) {
+            val action = if (step == 5) {
                 "Начать с Матчей"
             } else {
                 "Далее"

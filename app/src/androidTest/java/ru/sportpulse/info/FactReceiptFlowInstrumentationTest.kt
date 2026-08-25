@@ -50,7 +50,7 @@ class FactReceiptFlowInstrumentationTest {
 
     @Test
     fun receiptSavesFactorEvidenceAndSourceAuditTogether() {
-        clickText("Анализ") { it.contentDescription == "Раздел Анализ" }
+        clickText("Штаб") { it.contentDescription == "Раздел Штаб" }
         clickText("Записать факт и источники") { it.isClickable }
 
         setField(

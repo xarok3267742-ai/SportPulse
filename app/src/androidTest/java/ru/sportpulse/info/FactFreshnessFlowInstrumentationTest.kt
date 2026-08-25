@@ -66,8 +66,8 @@ class FactFreshnessFlowInstrumentationTest {
 
     @Test
     fun expiredReceiptStopsCountingAndBecomesFirstRouteStep() {
-        clickText("Анализ") {
-            it.contentDescription == "Раздел Анализ"
+        clickText("Штаб") {
+            it.contentDescription == "Раздел Штаб"
         }
         clickText("Открыть реестр фактов") { it.isClickable }
 
