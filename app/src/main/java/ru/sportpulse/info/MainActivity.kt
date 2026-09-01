@@ -91,6 +91,8 @@ class MainActivity : Activity() {
         PulseLabSection.ROUTE
     private var activeDecisionDeskSection =
         DecisionDeskSection.DECISION
+    private var decisionDeskWorkspaceExpanded = false
+    private var pendingDecisionDeskField: DecisionDeskField? = null
     private var pendingPulseFactor: SignalFactor? = null
     private var pendingPulseStoryAction: EventStoryAction? = null
     private var savedOnly = false
@@ -105,6 +107,8 @@ class MainActivity : Activity() {
     private var plainAnalyticsProtocolEventId: String? = null
     private var pulseLabNavigatorAnchor: View? = null
     private var analysisEventAnchor: View? = null
+    private var decisionDeskOverviewAnchor: View? = null
+    private var decisionDeskWorkspaceAnchor: View? = null
     private var passportExportInProgress = false
     private var eventPackageImportInProgress = false
     private var decisionDistanceDraft =
@@ -163,6 +167,11 @@ class MainActivity : Activity() {
                     STATE_DECISION_DESK_SECTION
                 )
             )
+        decisionDeskWorkspaceExpanded = savedInstanceState
+            ?.getBoolean(
+                STATE_DECISION_DESK_WORKSPACE_EXPANDED,
+                false
+            ) ?: false
         savedOnly = savedInstanceState?.getBoolean(STATE_SAVED_ONLY, false) ?: false
         eventSearchQuery = savedInstanceState
             ?.getString(STATE_EVENT_SEARCH_QUERY)
@@ -302,6 +311,10 @@ class MainActivity : Activity() {
         outState.putString(
             STATE_DECISION_DESK_SECTION,
             activeDecisionDeskSection.name
+        )
+        outState.putBoolean(
+            STATE_DECISION_DESK_WORKSPACE_EXPANDED,
+            decisionDeskWorkspaceExpanded
         )
         outState.putBoolean(STATE_SAVED_ONLY, savedOnly)
         outState.putString(
@@ -10960,26 +10973,33 @@ class MainActivity : Activity() {
             market = lens.item(draft.marketKind),
             counterView = counterView
         )
+        decisionDeskOverviewAnchor = null
+        decisionDeskWorkspaceAnchor = null
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(
-                decisionDeskHero(result),
+                decisionDeskSectionSwitcher(),
                 matchWrap()
             )
-            addView(
-                decisionDeskSectionSwitcher(),
-                matchWrap(top = 10)
-            )
             when (activeDecisionDeskSection) {
-                DecisionDeskSection.DECISION -> addView(
-                    decisionDeskDecisionPanel(
+                DecisionDeskSection.DECISION -> {
+                    val overview = decisionDeskOverviewPanel(
                         event = event,
-                        draft = draft,
-                        result = result,
-                        lens = lens
-                    ),
-                    matchWrap(top = 10)
-                )
+                        result = result
+                    )
+                    decisionDeskOverviewAnchor = overview
+                    addView(overview, matchWrap(top = 10))
+                    if (decisionDeskWorkspaceExpanded) {
+                        val workspace = decisionDeskDecisionPanel(
+                            event = event,
+                            draft = draft,
+                            result = result,
+                            lens = lens
+                        )
+                        decisionDeskWorkspaceAnchor = workspace
+                        addView(workspace, matchWrap(top = 16))
+                    }
+                }
                 DecisionDeskSection.HISTORY -> addView(
                     decisionDeskHistoryPanel(),
                     matchWrap(top = 10)
@@ -10992,85 +11012,217 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun decisionDeskHero(
+    private fun decisionDeskOverviewPanel(
+        event: SportEvent,
         result: DecisionDeskResult
-    ): FrameLayout {
+    ): LinearLayout {
         val tone = decisionDeskTone(result.status)
-        val height = if (
-            effectiveFontScale() >= 1.3f
-        ) {
-            268
+        val completedFields = DecisionDeskField.values().size -
+            result.missingFields.size
+        val imageHeight = if (effectiveFontScale() >= 1.8f) {
+            164
         } else {
-            226
+            116
         }
-        return imageFrame().apply {
-            minimumHeight = dp(height)
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             addView(
-                ImageView(this@MainActivity).apply {
-                    setImageResource(
-                        R.drawable.decision_headquarters
+                imageFrame().apply {
+                    addView(
+                        ImageView(this@MainActivity).apply {
+                            setImageResource(
+                                R.drawable.decision_gate_v350
+                            )
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                            contentDescription = null
+                        },
+                        frameMatch()
                     )
-                    scaleType = ImageView.ScaleType.CENTER_CROP
-                    contentDescription =
-                        "Штаб проверки матча с пятью модулями фактов и красной стоп-линией"
-                },
-                frameMatch()
-            )
-            addView(
-                View(this@MainActivity).apply {
-                    background = gradientScrim(compact = false)
-                },
-                frameMatch()
-            )
-            addView(
-                LinearLayout(this@MainActivity).apply {
-                    orientation = LinearLayout.VERTICAL
+                    addView(
+                        View(this@MainActivity).apply {
+                            setBackgroundColor(
+                                Color.argb(82, 8, 15, 17)
+                            )
+                        },
+                        frameMatch()
+                    )
                     addView(
                         label(
                             result.status.title,
                             tone.foreground,
                             Color.WHITE
-                        )
+                        ),
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            Gravity.TOP or Gravity.START
+                        ).apply {
+                            leftMargin = dp(12)
+                            topMargin = dp(12)
+                        }
+                    )
+                    addView(
+                        label(
+                            "ЗАМЫСЕЛ • $completedFields/3",
+                            Color.argb(215, 13, 30, 33),
+                            Color.WHITE,
+                            Color.argb(110, 255, 255, 255)
+                        ),
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            Gravity.TOP or Gravity.END
+                        ).apply {
+                            rightMargin = dp(12)
+                            topMargin = dp(12)
+                        }
                     )
                     addView(
                         text(
-                            "Штаб решения",
-                            28f,
+                            result.headline,
+                            20f,
                             Color.WHITE,
                             Typeface.BOLD
                         ).apply {
                             maxLines = 2
+                            setTextSize(
+                                TypedValue.COMPLEX_UNIT_PX,
+                                20f *
+                                    resources.displayMetrics.density *
+                                    min(effectiveFontScale(), 1.35f)
+                            )
                         },
-                        matchWrap(top = 9)
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            Gravity.BOTTOM
+                        ).apply {
+                            leftMargin = dp(12)
+                            rightMargin = dp(12)
+                            bottomMargin = dp(11)
+                        }
+                    )
+                },
+                matchFixed(imageHeight)
+            )
+            addView(
+                text(
+                    result.explanation,
+                    13.5f,
+                    AppColors.ink
+                ),
+                matchWrap(top = 9)
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(
+                        text(
+                            "СЕЙЧАС",
+                            10.5f,
+                            AppColors.signal,
+                            Typeface.BOLD
+                        ),
+                        wrapWrap(right = 10)
                     )
                     addView(
                         text(
-                            "Не угадывайте исход. Проверьте, выдержит ли идея матч.",
+                            result.actionTitle,
                             14f,
-                            Color.rgb(218, 233, 231),
+                            AppColors.ink,
                             Typeface.BOLD
-                        ).apply {
-                            maxLines = 3
-                        },
-                        matchWrap(top = 4)
+                        ),
+                        LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1f
+                        )
                     )
                 },
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.BOTTOM
-                ).apply {
-                    leftMargin = dp(16)
-                    rightMargin = dp(16)
-                    bottomMargin = dp(15)
+                matchWrap(top = 9)
+            )
+            addView(
+                commandButton(
+                    result.actionTitle,
+                    AppColors.signal
+                ) {
+                    performDecisionDeskPrimaryAction(
+                        event = event,
+                        result = result
+                    )
+                },
+                matchWrap(top = 8)
+            )
+            if (
+                result.missingFields.isEmpty() ||
+                decisionDeskWorkspaceExpanded
+            ) {
+                addView(
+                    outlineButton(
+                        if (decisionDeskWorkspaceExpanded) {
+                            "Свернуть рабочую форму"
+                        } else {
+                            "Открыть рабочую форму"
+                        },
+                        AppColors.signal
+                    ) {
+                        decisionDeskWorkspaceExpanded =
+                            !decisionDeskWorkspaceExpanded
+                        pendingDecisionDeskField = null
+                        renderContent()
+                        val target = if (
+                            decisionDeskWorkspaceExpanded
+                        ) {
+                            decisionDeskWorkspaceAnchor
+                        } else {
+                            decisionDeskOverviewAnchor
+                        }
+                        target?.let {
+                            scrollToAppView(it, topOffsetDp = 10)
+                        }
+                    },
+                    matchWrap(top = 7)
+                )
+            }
+        }
+    }
+
+    private fun performDecisionDeskPrimaryAction(
+        event: SportEvent,
+        result: DecisionDeskResult
+    ) {
+        val field = when {
+            result.missingFields.isNotEmpty() ->
+                result.missingFields.first()
+            result.counterVerdict == CounterViewVerdict.REFUTED ->
+                DecisionDeskField.THESIS
+            else -> null
+        }
+        if (
+            field != null ||
+            result.marketStatus == null ||
+            result.marketStatus == MarketLensStatus.NOT_APPLICABLE
+        ) {
+            decisionDeskWorkspaceExpanded = true
+            pendingDecisionDeskField = field
+            renderContent()
+            decisionDeskWorkspaceAnchor?.let {
+                scrollToAppView(it, topOffsetDp = 10)
+            }
+            return
+        }
+        result.nextFactor?.let(::openPulseFactor)
+            ?: openDecisionDeskLab(
+                if (
+                    result.status ==
+                    DecisionDeskStatus.FACTS_READY
+                ) {
+                    PulseLabSection.DECISION
+                } else {
+                    PulseLabSection.FACTS
                 }
             )
-        }.also {
-            it.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(height)
-            )
-        }
     }
 
     private fun decisionDeskSectionSwitcher(): LinearLayout {
@@ -11156,7 +11308,9 @@ class MainActivity : Activity() {
         result: DecisionDeskResult,
         lens: MarketLensResult
     ): LinearLayout {
-        val panel = card()
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
         val tone = decisionDeskTone(result.status)
         lateinit var thesisInput: EditText
         lateinit var counterargumentInput: EditText
@@ -11164,18 +11318,18 @@ class MainActivity : Activity() {
 
         panel.addView(
             text(
-                result.headline,
+                "Рабочая форма",
                 22f,
-                tone.foreground,
+                AppColors.ink,
                 Typeface.BOLD
             ),
             matchWrap()
         )
         panel.addView(
             text(
-                result.explanation,
+                "Три проверяемых поля. Сохранение обновит табло и карту данных, но не создаст прогноз.",
                 13.5f,
-                AppColors.ink
+                AppColors.muted
             ),
             matchWrap(top = 6)
         )
@@ -11372,48 +11526,23 @@ class MainActivity : Activity() {
                 )
                 state.saveDecisionDeskDraft(updated)
                 hideKeyboard()
-                rerenderContentPreservingScroll()
+                renderContent()
+                decisionDeskOverviewAnchor?.let {
+                    scrollToAppView(it, topOffsetDp = 10)
+                }
             },
             matchWrap(top = 15)
         )
         panel.addView(
             outlineButton(
-                result.actionTitle,
-                tone.foreground
+                "Свернуть рабочую форму",
+                AppColors.signal
             ) {
-                when (result.missingFields.firstOrNull()) {
-                    DecisionDeskField.THESIS ->
-                        focusDecisionDeskInput(thesisInput)
-                    DecisionDeskField.COUNTERARGUMENT ->
-                        focusDecisionDeskInput(
-                            counterargumentInput
-                        )
-                    DecisionDeskField.STOP_CONDITION ->
-                        focusDecisionDeskInput(stopConditionInput)
-                    null -> {
-                        val updated =
-                            decisionDeskDraftFromInputs(
-                                event = event,
-                                marketKind = draft.marketKind,
-                                thesisInput = thesisInput,
-                                counterargumentInput =
-                                    counterargumentInput,
-                                stopConditionInput =
-                                    stopConditionInput
-                            )
-                        state.saveDecisionDeskDraft(updated)
-                        result.nextFactor?.let(::openPulseFactor)
-                            ?: openDecisionDeskLab(
-                                if (
-                                    result.status ==
-                                    DecisionDeskStatus.FACTS_READY
-                                ) {
-                                    PulseLabSection.DECISION
-                                } else {
-                                    PulseLabSection.FACTS
-                                }
-                            )
-                    }
+                decisionDeskWorkspaceExpanded = false
+                pendingDecisionDeskField = null
+                renderContent()
+                decisionDeskOverviewAnchor?.let {
+                    scrollToAppView(it, topOffsetDp = 10)
                 }
             },
             matchWrap(top = 8)
@@ -11432,6 +11561,20 @@ class MainActivity : Activity() {
             decisionDeskGuidePanel(),
             matchWrap(top = 16)
         )
+        pendingDecisionDeskField?.let { field ->
+            val target = when (field) {
+                DecisionDeskField.THESIS -> thesisInput
+                DecisionDeskField.COUNTERARGUMENT ->
+                    counterargumentInput
+                DecisionDeskField.STOP_CONDITION ->
+                    stopConditionInput
+            }
+            pendingDecisionDeskField = null
+            panel.post {
+                focusDecisionDeskInput(target)
+                scrollToAppView(target, topOffsetDp = 18)
+            }
+        }
         return panel
     }
 
@@ -12269,6 +12412,8 @@ class MainActivity : Activity() {
     ) {
         activeDecisionDeskSection =
             DecisionDeskSection.DECISION
+        decisionDeskWorkspaceExpanded = false
+        pendingDecisionDeskField = null
         activePulseWorkspaceMode = PulseWorkspaceMode.LAB
         activePulseLabSection = section
         state.selectedPulseWorkspaceMode =
@@ -12286,7 +12431,7 @@ class MainActivity : Activity() {
         content.addView(
             sectionTitle(
                 "Штаб решения",
-                "Тезис, контраргумент, условие отмены и один следующий шаг. Без вероятности исхода и советов по ставке."
+                "Тезис, контраргумент, стоп-условие. Один проверяемый шаг."
             )
         )
 
@@ -14156,7 +14301,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             addView(
                 frame,
-                matchWrap()
+                matchFixed(132)
             )
             addView(
                 eventDetails.apply {
@@ -21651,16 +21796,16 @@ class MainActivity : Activity() {
             addView(
                 guideStepRow(
                     number = "2",
-                    title = "Соберите развилку",
-                    body = "В «Штабе» постройте сценарии A и B, затем проведите наблюдаемую стоп-линию. Развилка покажет факт, который лучше всего разделит версии."
+                    title = "Прочитайте табло",
+                    body = "В «Штабе» сначала видны статус, готовность замысла, причина и одна команда. Карта данных начинается сразу под табло."
                 ),
                 matchWrap(top = 10)
             )
             addView(
                 guideStepRow(
                     number = "3",
-                    title = "Прочитайте статус",
-                    body = "Три строки объяснят, что изменилось, чего не хватает и что делать сейчас. Статус всегда закрывается при критическом пробеле."
+                    title = "Откройте рабочую форму",
+                    body = "Раскройте её только для редактирования. Постройте сценарии A и B и проведите наблюдаемую стоп-линию."
                 ),
                 matchWrap(top = 10)
             )
@@ -21735,7 +21880,7 @@ class MainActivity : Activity() {
             addView(
                 dictionaryRow(
                     "Штаб решения",
-                    "Единый маршрут матча: тип проверки, тезис, контраргумент, условие отмены и текущий статус. Вкладки «История» и «Профиль» оценивают процесс без коэффициентов, сумм и доходности."
+                    "Сначала показывает компактное табло: статус, заполненность замысла, причину и одно действие. Полная форма раскрывается только для редактирования; «История» и «Профиль» оценивают процесс без коэффициентов, сумм и доходности."
                 ),
                 matchWrap(top = 11)
             )
@@ -21974,14 +22119,14 @@ class MainActivity : Activity() {
                 "Время и статус берутся из расписания. Перед решением всё равно сверьте их с официальным источником."
             ),
             Triple(
-                "2. Соберите развилку",
-                "В «Штабе» постройте сценарии A и B и проведите стоп-линию. Развилка покажет один факт, который лучше всего разделит две версии.",
-                "Незаполненная развилка получает статус «Стоп». Приложение не выбирает удобный сценарий за пользователя."
+                "2. Прочитайте табло",
+                "В «Штабе» сначала видны статус, готовность замысла, причина и одна команда. Карта данных начинается сразу следом.",
+                "Статус описывает качество проверки. Синяя команда — следующий шаг, а не совет сделать ставку."
             ),
             Triple(
-                "3. Прочитайте статус",
-                "Штаб отвечает на три вопроса: что изменилось, чего не хватает и что делать сейчас. Ниже карта показывает пять факторов.",
-                "Статусы показывают качество и свежесть проверки. Они не показывают шанс победы."
+                "3. Откройте рабочую форму",
+                "Раскройте форму только для редактирования: постройте сценарии A и B и проведите наблюдаемую стоп-линию.",
+                "Незаполненная развилка получает статус «Стоп». Приложение не выбирает удобный сценарий за пользователя."
             ),
             Triple(
                 "4. Закройте один пробел",
@@ -24665,6 +24810,8 @@ class MainActivity : Activity() {
     }
 
     private fun openPulseFactor(factor: SignalFactor) {
+        decisionDeskWorkspaceExpanded = false
+        pendingDecisionDeskField = null
         activePulseWorkspaceMode = PulseWorkspaceMode.LAB
         activePulseLabSection = PulseLabSection.FACTS
         state.selectedPulseWorkspaceMode = PulseWorkspaceMode.LAB
@@ -24677,6 +24824,9 @@ class MainActivity : Activity() {
         state.selectedEventId = eventId
         activePulseWorkspaceMode = PulseWorkspaceMode.STORY
         activePulseLabSection = PulseLabSection.ROUTE
+        activeDecisionDeskSection = DecisionDeskSection.DECISION
+        decisionDeskWorkspaceExpanded = false
+        pendingDecisionDeskField = null
         state.selectedPulseWorkspaceMode = PulseWorkspaceMode.STORY
         pulseStoryControlsExpanded = false
         pendingPulseFactor = null
@@ -24751,7 +24901,7 @@ class MainActivity : Activity() {
                 configuration.screenWidthDp < 360 -> 220
             configuration.fontScale >= 1.3f -> 196
             configuration.screenHeightDp < 840 -> 96
-            else -> 128
+            else -> 112
         }
     }
 
@@ -25006,6 +25156,8 @@ class MainActivity : Activity() {
             "pulse_lab_section"
         const val STATE_DECISION_DESK_SECTION =
             "decision_desk_section"
+        const val STATE_DECISION_DESK_WORKSPACE_EXPANDED =
+            "decision_desk_workspace_expanded"
         const val STATE_UPDATE_RADAR_EXPANDED =
             "update_radar_expanded"
         const val STATE_DECISION_LEDGER_EXPANDED =

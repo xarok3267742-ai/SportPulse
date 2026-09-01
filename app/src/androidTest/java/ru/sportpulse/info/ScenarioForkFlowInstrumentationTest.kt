@@ -53,6 +53,16 @@ class ScenarioForkFlowInstrumentationTest {
                 .performClick()
         }
         instrumentation.waitForIdleSync()
+        scenario.onActivity { activity ->
+            descendants(activity.window.decorView)
+                .filterIsInstance<TextView>()
+                .first {
+                    it.text.toString() == "Сформулировать тезис" &&
+                        it.isClickable
+                }
+                .performClick()
+        }
+        instrumentation.waitForIdleSync()
 
         assertForkFocuses(
             contentDescriptionPrefix = "Сценарий A:",

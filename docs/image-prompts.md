@@ -638,3 +638,20 @@ Avoid: sci-fi spaceship aesthetic, neon overload, decorative glow blobs, clutter
 ```
 
 Generated with the built-in image generation tool and saved as `app/src/main/res/drawable-nodpi/cross_source_map.jpg`. The image contains five distinct evidence cartridges, five source modules and a restrained amber route that physically shares one dependency across several channels.
+
+## Decision gate
+
+```text
+Use case: stylized-concept
+Asset type: compact horizontal in-app banner for an Android sports analysis decision summary
+Primary request: create a distinctive physical sports analyst decision console showing one clear next-action gate, not a betting interface
+Scene/backdrop: close top-down view of a dark graphite operations desk beside the edge of a real football tactics board; one mechanical gate lever in the center-right, three small evidence cartridges aligned nearby, subtle field markings and paper texture
+Subject: a single tactile decision gate with a restrained red stop indicator, cyan verification line, and deep teal confirmed indicator; no people
+Style/medium: premium cinematic product photography, realistic materials, industrial editorial sports aesthetic, sharp details, sophisticated and credible
+Composition/framing: wide 16:9 landscape, important physical objects kept in the center and right half, darker uncluttered negative space on the left for native Android text overlay, readable at small mobile banner size
+Lighting/mood: controlled stadium spill light, high local contrast, calm analytical atmosphere rather than excitement
+Color palette: graphite, off-white, deep teal, cyan and restrained signal red; avoid blue-only or orange-dominant palette
+Constraints: no words, no letters, no numbers, no logos, no team branding, no odds, no money, no casino objects, no smartphone mockup, no UI text, no watermark; this must look like an original physical sports analysis instrument rather than generic AI dashboard art
+```
+
+Generated with the built-in image generation tool, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/decision_gate_v350.jpg`. The physical lever, three evidence cartridges and dark left field remain readable under the native status, progress and headline overlay.
