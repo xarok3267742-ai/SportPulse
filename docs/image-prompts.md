@@ -655,3 +655,21 @@ Constraints: no words, no letters, no numbers, no logos, no team branding, no od
 ```
 
 Generated with the built-in image generation tool, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/decision_gate_v350.jpg`. The physical lever, three evidence cartridges and dark left field remain readable under the native status, progress and headline overlay.
+
+## Progressive fact receipt
+
+```text
+Use case: stylized-concept
+Asset type: compact horizontal header inside an Android sports-analysis fact capture dialog
+Primary request: create a distinctive physical evidence assembly showing how one sports fact is connected to its origin and optionally cross-checked by a second independent source
+Scene/backdrop: close top-down view of a dark graphite editorial analysis desk beside a subtle football tactics sheet
+Subject: one clear paper fact slip enters from the lower center; a primary source cartridge feeds into it from the upper left; a second independent source cartridge waits at the upper right behind a small mechanical gate; the completed receipt sits in a transparent sealed tray at center, with restrained cyan routing lights and a single deep-teal confirmation indicator
+Style/medium: premium cinematic product photography, realistic materials, industrial editorial sports aesthetic, original physical instrument rather than a software dashboard
+Composition/framing: wide 16:9 landscape, all key objects centered and readable when cropped to a short mobile banner, strong left-to-right visual logic, no important detail at extreme edges
+Lighting/mood: controlled stadium spill light, high local contrast, calm and methodical
+Color palette: graphite, off-white paper, cyan, deep teal, and one restrained signal-red seal; balanced, not monochromatic
+Materials/textures: matte metal, clear polycarbonate, paper fibers, subtle field-board markings
+Constraints: no words, no letters, no numbers, no logos, no team branding, no odds, no money, no casino objects, no smartphone mockup, no UI text, no watermark; exactly two source cartridges maximum; visually communicate primary evidence first and optional independent cross-check second
+```
+
+Generated with the built-in image generation tool, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/fact_receipt_v360.jpg`. The primary cartridge, gated optional second cartridge and sealed receipt stay readable in the short 112 dp header and its 76 dp large-text variant.

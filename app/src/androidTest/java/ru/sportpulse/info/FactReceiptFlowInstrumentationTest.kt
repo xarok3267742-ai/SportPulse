@@ -1,6 +1,7 @@
 package ru.sportpulse.info
 
 import android.content.Context
+import android.graphics.Rect
 import android.view.View
 import android.view.ViewGroup
 import android.view.inspector.WindowInspector
@@ -53,19 +54,33 @@ class FactReceiptFlowInstrumentationTest {
         clickText("Штаб") { it.contentDescription == "Раздел Штаб" }
         clickText("Записать факт и источники") { it.isClickable }
 
+        assertTextVisible("ШАГ 1 ИЗ 2")
+        assertTextNotShown("Как связаны источники?")
+        assertTextNotShown("Полнота проверки")
+        assertActionsVisibleAndSeparate("Сохранить", "Отмена")
+
         setField(
             hint = "Например: в последних трёх матчах использовалась одна схема",
             value = "Подтверждён опубликованный стартовый состав события"
         )
+        assertTextVisible("Укажите происхождение")
         setField(
             hint = "Название или ссылка на первичную публикацию",
             value = "https://club.example/report"
         )
+        assertTextVisible("Готово: один источник")
+        clickText("Добавить второй источник") { it.isClickable }
+        assertTextVisible("Добавьте второй источник")
+        assertTextShown("Как связаны источники?")
         setField(
             hint = "Название или ссылка; можно оставить пустым",
             value = "https://league.example/matches"
         )
+        assertTextVisible("Проверьте связь источников")
         clickRadio("Независимы •")
+        assertTextVisible("Независимая пара готова")
+        clickText("Уточнить полноту проверки") { it.isClickable }
+        assertTextShown("Полнота проверки")
         clickRadio("Полная проверка •")
         clickText("СОХРАНИТЬ") { it.isClickable }
 
@@ -241,6 +256,69 @@ class FactReceiptFlowInstrumentationTest {
                 .filterIsInstance<TextView>()
                 .any { it.text.toString() == title }
             assertTrue("Text not visible: $title", found)
+        }
+    }
+
+    private fun assertTextShown(title: String) {
+        scenario.onActivity { activity ->
+            val found = windowRoots(activity)
+                .flatMap(::descendants)
+                .filterIsInstance<TextView>()
+                .any {
+                    it.text.toString() == title && it.isShown
+                }
+            assertTrue("Text not shown: $title", found)
+        }
+    }
+
+    private fun assertTextNotShown(title: String) {
+        scenario.onActivity { activity ->
+            val hidden = windowRoots(activity)
+                .flatMap(::descendants)
+                .filterIsInstance<TextView>()
+                .none {
+                    it.text.toString() == title && it.isShown
+                }
+            assertTrue("Text unexpectedly shown: $title", hidden)
+        }
+    }
+
+    private fun assertActionsVisibleAndSeparate(
+        primaryTitle: String,
+        secondaryTitle: String
+    ) {
+        scenario.onActivity { activity ->
+            val controls = windowRoots(activity)
+                .flatMap(::descendants)
+                .filterIsInstance<TextView>()
+                .filter { it.isShown }
+                .associateBy { it.text.toString() }
+            val primary = controls[primaryTitle]
+                ?: error("Action not shown: $primaryTitle")
+            val secondary = controls[secondaryTitle]
+                ?: error("Action not shown: $secondaryTitle")
+            val primaryRect = Rect()
+            val secondaryRect = Rect()
+            assertTrue(
+                "$primaryTitle has no visible bounds",
+                primary.getGlobalVisibleRect(primaryRect)
+            )
+            assertTrue(
+                "$secondaryTitle has no visible bounds",
+                secondary.getGlobalVisibleRect(secondaryRect)
+            )
+            assertTrue(
+                "$primaryTitle is clipped",
+                primaryRect.height() >= primary.height - 2
+            )
+            assertTrue(
+                "$secondaryTitle is clipped",
+                secondaryRect.height() >= secondary.height - 2
+            )
+            assertTrue(
+                "Receipt actions overlap",
+                !Rect.intersects(primaryRect, secondaryRect)
+            )
         }
     }
 

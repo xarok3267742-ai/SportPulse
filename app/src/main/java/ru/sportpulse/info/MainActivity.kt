@@ -15,8 +15,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.text.Editable
 import android.text.Spannable
 import android.text.SpannableString
+import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -17234,6 +17236,7 @@ class MainActivity : Activity() {
         factor: SignalFactor,
         returnToRegister: Boolean = false
     ) {
+        lateinit var dialog: AlertDialog
         val read = state.factReceipt(event.id, factor)
         val existing = read.receipt
         val statementField = factReceiptEditText(
@@ -17280,6 +17283,149 @@ class MainActivity : Activity() {
             coverageButtons.values.forEach(::addView)
         }
 
+        val composerBadge = label(
+            "",
+            AppColors.signalSoft,
+            AppColors.signal
+        ).apply {
+            textSize = fixedControlTextSize(11f)
+        }
+        val composerHeadline = text(
+            "",
+            17f,
+            AppColors.ink,
+            Typeface.BOLD
+        ).apply {
+            textSize = fixedControlTextSize(17f)
+        }
+        val composerBody = text("", 12.5f, AppColors.ink).apply {
+            textSize = fixedControlTextSize(12.5f)
+        }
+        val composerPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(13), dp(12), dp(13), dp(12))
+            addView(composerBadge)
+            addView(composerHeadline, matchWrap(top = 7))
+            addView(composerBody, matchWrap(top = 4))
+        }
+
+        val includeSecondSource = CheckBox(this).apply {
+            text = "Добавить второй источник"
+            textSize = fixedControlTextSize(14f)
+            setTextColor(AppColors.ink)
+            typeface = AppTypography.body(this@MainActivity)
+            buttonTintList = checkBoxColors()
+            minHeight = dp(48)
+            gravity = Gravity.CENTER_VERTICAL
+            isChecked = existing?.secondarySource != null
+            contentDescription =
+                "Добавить второй источник для независимой сверки"
+        }
+        val secondSourceDisclosure = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(
+                AppColors.signalSoft,
+                8,
+                AppColors.signal,
+                1
+            )
+            setPadding(dp(12), dp(5), dp(12), dp(10))
+            addView(includeSecondSource, matchWrap())
+            addView(
+                text(
+                    "Необязательно. Кворум появится только после проверки связи двух первичных цепочек.",
+                    11.5f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 1)
+            )
+        }
+        val secondarySection = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                factReceiptField(
+                    title = "Второй источник",
+                    field = secondarySourceField
+                )
+            )
+            addView(
+                text(
+                    "Как связаны источники?",
+                    14f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 14)
+            )
+            addView(
+                text(
+                    "Разные ссылки могут вести к одной публикации. Выберите фактическое происхождение.",
+                    12f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 3)
+            )
+            addView(auditGroup, matchWrap(top = 5))
+            visibility = if (includeSecondSource.isChecked) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+        }
+
+        val refineCoverage = CheckBox(this).apply {
+            text = "Уточнить полноту проверки"
+            textSize = fixedControlTextSize(14f)
+            setTextColor(AppColors.ink)
+            typeface = AppTypography.body(this@MainActivity)
+            buttonTintList = checkBoxColors()
+            minHeight = dp(48)
+            gravity = Gravity.CENTER_VERTICAL
+            isChecked = existing?.coverage != null &&
+                existing.coverage != FactReceiptCoverage.CORE
+            contentDescription =
+                "Показать варианты полноты проверки"
+        }
+        val coverageDisclosure = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(AppColors.background, 8)
+            setPadding(dp(12), dp(5), dp(12), dp(10))
+            addView(refineCoverage, matchWrap())
+            addView(
+                text(
+                    "По умолчанию сохраняется базовый факт. Откройте только если проверены детали или контраргумент.",
+                    11.5f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 1)
+            )
+        }
+        val coverageSection = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                text(
+                    "Полнота проверки",
+                    14f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                )
+            )
+            addView(
+                text(
+                    "Это объём собранных данных, а не сила команды и не вероятность исхода.",
+                    12f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 3)
+            )
+            addView(coverageGroup, matchWrap(top = 5))
+            visibility = if (refineCoverage.isChecked) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+        }
+
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(16), dp(18), dp(20))
@@ -17308,32 +17454,28 @@ class MainActivity : Activity() {
                     21f,
                     AppColors.ink,
                     Typeface.BOLD
-                ),
+                ).apply {
+                    textSize = fixedControlTextSize(21f)
+                },
                 matchWrap(top = 11)
+            )
+            addView(
+                composerPanel,
+                matchWrap(top = 10)
             )
             addView(
                 text(
                     if (returnToRegister) {
-                        "Один тезис и его происхождение. После действия вы вернётесь в обновлённый реестр."
+                        "Один тезис и его происхождение. После сохранения вернёмся в обновлённый реестр."
                     } else {
-                        "Один проверяемый тезис связывается с происхождением данных. Сохранение обновит только этот фактор."
+                        "Один тезис и его происхождение. Сохранение обновит только этот фактор."
                     },
                     13f,
                     AppColors.muted
-                ),
-                matchWrap(top = 5)
-            )
-            addView(
-                text(
-                    "Ссылки не открываются автоматически. Приложение проверяет структуру записи, но не правдивость публикации; независимость цепочек подтверждает пользователь.",
-                    12f,
-                    AppColors.warning,
-                    Typeface.BOLD
                 ).apply {
-                    background = rounded(AppColors.warningSoft, 8)
-                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    textSize = fixedControlTextSize(13f)
                 },
-                matchWrap(top = 10)
+                matchWrap(top = 5)
             )
             addView(
                 factReceiptField(
@@ -17350,64 +17492,65 @@ class MainActivity : Activity() {
                 matchWrap(top = 12)
             )
             addView(
-                factReceiptField(
-                    title = "Второй источник • необязательно",
-                    field = secondarySourceField
-                ),
-                matchWrap(top = 12)
-            )
-            addView(
-                text(
-                    "Связь источников",
-                    14f,
-                    AppColors.ink,
-                    Typeface.BOLD
-                ),
+                secondSourceDisclosure,
                 matchWrap(top = 14)
             )
             addView(
-                text(
-                    "Две записи не становятся независимыми автоматически. Укажите, ведут ли они к разным первичным публикациям.",
-                    12f,
-                    AppColors.muted
-                ),
-                matchWrap(top = 3)
+                secondarySection,
+                matchWrap(top = 12)
             )
-            addView(auditGroup, matchWrap(top = 5))
             addView(
-                text(
-                    "Полнота проверки",
-                    14f,
-                    AppColors.ink,
-                    Typeface.BOLD
-                ),
+                coverageDisclosure,
+                matchWrap(top = 14)
+            )
+            addView(
+                coverageSection,
                 matchWrap(top = 12)
             )
             addView(
                 text(
-                    "Это качество собранных данных, а не сила команды и не вероятность исхода.",
-                    12f,
+                    "Ссылки не открываются автоматически. Приложение проверяет структуру записи, а не истинность публикации.",
+                    11.5f,
                     AppColors.muted
                 ),
-                matchWrap(top = 3)
+                matchWrap(top = 14)
             )
-            addView(coverageGroup, matchWrap(top = 5))
+            if (read.integrity != FactReceiptIntegrity.EMPTY) {
+                addView(
+                    outlineButton("Удалить", AppColors.danger) {
+                        confirmFactReceiptDelete(
+                            event = event,
+                            factor = factor,
+                            editorDialog = dialog,
+                            returnToRegister = returnToRegister
+                        )
+                    }.apply {
+                        textSize = fixedControlTextSize(13f)
+                        contentDescription =
+                            "Удалить факт-квитанцию: ${factor.title}"
+                    },
+                    matchWrap(top = 14)
+                )
+            }
         }
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(
                 ImageView(this@MainActivity).apply {
-                    setImageResource(R.drawable.fact_receipt)
+                    setImageResource(R.drawable.fact_receipt_v360)
                     scaleType = ImageView.ScaleType.CENTER_CROP
                     contentDescription =
-                        "Два источника сходятся в одну факт-квитанцию"
+                        "Первичный источник и независимая сверка собираются в запечатанную факт-квитанцию"
                 },
-                matchFixed(138)
+                matchFixed(
+                    if (effectiveFontScale() >= 1.8f) 76 else 112
+                )
             )
             addView(form)
         }
         val scroll = ScrollView(this).apply {
             isFillViewport = true
+            isVerticalScrollBarEnabled = true
             addView(
                 panel,
                 FrameLayout.LayoutParams(
@@ -17416,106 +17559,253 @@ class MainActivity : Activity() {
                 )
             )
         }
-        val builder = AlertDialog.Builder(this)
-            .setView(scroll)
-            .setPositiveButton("Сохранить", null)
-            .setNegativeButton(
-                if (returnToRegister) "К реестру" else "Отмена",
-                null
-            )
-        if (read.integrity != FactReceiptIntegrity.EMPTY) {
-            builder.setNeutralButton("Удалить", null)
+        val saveButton = commandButton(
+            "Сохранить",
+            AppColors.accent
+        ) {}.apply {
+            textSize = fixedControlTextSize(14f)
+            contentDescription = "Сохранить факт-квитанцию"
         }
-        val dialog = builder.create()
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                .setOnClickListener {
-                    val statement = statementField.text.toString().trim()
-                    val primarySource =
-                        primarySourceField.text.toString().trim()
-                    val secondarySource =
-                        secondarySourceField.text.toString().trim()
-                    var valid = true
-                    if (
-                        statement.length <
-                        FactReceiptPolicy.MIN_STATEMENT_LENGTH
-                    ) {
-                        statementField.error =
-                            "Опишите тезис минимум в ${FactReceiptPolicy.MIN_STATEMENT_LENGTH} символах"
-                        valid = false
-                    }
-                    if (
-                        primarySource.length <
-                        FactReceiptPolicy.MIN_SOURCE_LENGTH
-                    ) {
-                        primarySourceField.error =
-                            "Укажите название или ссылку на источник"
-                        valid = false
-                    }
-                    if (
-                        secondarySource.isNotEmpty() &&
-                        secondarySource.length <
-                        FactReceiptPolicy.MIN_SOURCE_LENGTH
-                    ) {
-                        secondarySourceField.error =
-                            "Укажите источник полностью или оставьте поле пустым"
-                        valid = false
-                    }
-                    if (!valid) return@setOnClickListener
-
-                    val audit = auditButtons.entries.first {
-                        it.value.isChecked
-                    }.key
-                    val coverage = coverageButtons.entries.first {
-                        it.value.isChecked
-                    }.key
-                    val receipt = FactReceiptFactory.create(
-                        eventId = event.id,
-                        factor = factor,
-                        statement = statement,
-                        primarySource = primarySource,
-                        secondarySource = secondarySource,
-                        sourceAuditState = audit,
-                        coverage = coverage,
-                        checkedAt = System.currentTimeMillis()
-                    )
-                    state.saveFactReceipt(receipt)
-                    dialog.dismiss()
-                    Toast.makeText(
-                        this,
-                        "Квитанция сохранена • ${factReceiptSourceSummary(receipt)}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    rerenderContentPreservingScroll()
-                    if (returnToRegister) {
-                        showFactRegisterDialog(event)
-                    }
-                }
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-                .setOnClickListener {
-                    dialog.dismiss()
-                    if (returnToRegister) {
-                        showFactRegisterDialog(event)
-                    }
-                }
-            if (read.integrity != FactReceiptIntegrity.EMPTY) {
-                dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
-                    .setOnClickListener {
-                        confirmFactReceiptDelete(
-                            event = event,
-                            factor = factor,
-                            editorDialog = dialog,
-                            returnToRegister = returnToRegister
-                        )
-                    }
+        val cancelButton = outlineButton(
+            if (returnToRegister) "К реестру" else "Отмена",
+            AppColors.muted
+        ) {}.apply {
+            textSize = fixedControlTextSize(13f)
+            contentDescription = if (returnToRegister) {
+                "Вернуться в реестр фактов без сохранения"
+            } else {
+                "Закрыть факт-квитанцию без сохранения"
             }
         }
+        val actions = LinearLayout(this).apply {
+            val stackActions =
+                effectiveFontScale() >= 1.3f ||
+                    resources.configuration.screenWidthDp < 380
+            orientation = if (stackActions) {
+                LinearLayout.VERTICAL
+            } else {
+                LinearLayout.HORIZONTAL
+            }
+            setPadding(dp(16), dp(10), dp(16), dp(14))
+            if (stackActions) {
+                addView(saveButton, matchWrap())
+                addView(cancelButton, matchWrap(top = 8))
+            } else {
+                addView(
+                    cancelButton,
+                    LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    ).apply {
+                        rightMargin = dp(8)
+                    }
+                )
+                addView(
+                    saveButton,
+                    LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                )
+            }
+        }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(AppColors.surface)
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(factReceiptDialogHeightDp())
+            )
+            addView(
+                scroll,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+                )
+            )
+            addView(divider(), matchFixed(1))
+            addView(actions, matchWrap())
+        }
+        dialog = AlertDialog.Builder(this)
+            .setView(root)
+            .create()
+        lateinit var refreshComposer: () -> Unit
+        fun selectedAudit(): SourceAuditState {
+            return auditButtons.entries.firstOrNull {
+                it.value.isChecked
+            }?.key ?: SourceAuditState.UNAUDITED
+        }
+        refreshComposer = {
+            val result = FactReceiptComposer.evaluate(
+                statement = statementField.text.toString(),
+                primarySource = primarySourceField.text.toString(),
+                includeSecondSource = includeSecondSource.isChecked,
+                secondarySource = secondarySourceField.text.toString(),
+                selectedAudit = selectedAudit()
+            )
+            val tone = factReceiptComposerTone(result.status)
+            composerPanel.background = rounded(
+                tone.background,
+                8,
+                tone.foreground,
+                1
+            )
+            composerBadge.text = result.status.badge
+            composerBadge.setTextColor(tone.foreground)
+            composerBadge.background = rounded(
+                tone.background,
+                14,
+                tone.foreground,
+                1
+            )
+            composerHeadline.text = result.status.headline
+            composerHeadline.setTextColor(tone.foreground)
+            composerBody.text = result.status.body
+            saveButton.isEnabled = result.canSave
+            saveButton.alpha = if (result.canSave) 1f else 0.48f
+        }
+        val composerWatcher = object : TextWatcher {
+            override fun beforeTextChanged(
+                value: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) = Unit
+
+            override fun onTextChanged(
+                value: CharSequence?,
+                start: Int,
+                before: Int,
+                count: Int
+            ) = Unit
+
+            override fun afterTextChanged(value: Editable?) {
+                refreshComposer()
+            }
+        }
+        statementField.addTextChangedListener(composerWatcher)
+        primarySourceField.addTextChangedListener(composerWatcher)
+        secondarySourceField.addTextChangedListener(composerWatcher)
+        includeSecondSource.setOnCheckedChangeListener { _, checked ->
+            secondarySection.visibility = if (checked) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+            refreshComposer()
+        }
+        refineCoverage.setOnCheckedChangeListener { _, checked ->
+            coverageSection.visibility = if (checked) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+        }
+        auditGroup.setOnCheckedChangeListener { _, _ ->
+            refreshComposer()
+        }
+        saveButton.setOnClickListener {
+            val statement = statementField.text.toString().trim()
+            val primarySource = primarySourceField.text.toString().trim()
+            val secondarySource = if (includeSecondSource.isChecked) {
+                secondarySourceField.text.toString().trim()
+            } else {
+                ""
+            }
+            val composer = FactReceiptComposer.evaluate(
+                statement = statement,
+                primarySource = primarySource,
+                includeSecondSource = includeSecondSource.isChecked,
+                secondarySource = secondarySource,
+                selectedAudit = selectedAudit()
+            )
+            var valid = true
+            if (
+                statement.length < FactReceiptPolicy.MIN_STATEMENT_LENGTH
+            ) {
+                statementField.error =
+                    "Опишите тезис минимум в ${FactReceiptPolicy.MIN_STATEMENT_LENGTH} символах"
+                valid = false
+            }
+            if (
+                primarySource.length < FactReceiptPolicy.MIN_SOURCE_LENGTH
+            ) {
+                primarySourceField.error =
+                    "Укажите название или ссылку на источник"
+                valid = false
+            }
+            if (
+                includeSecondSource.isChecked &&
+                secondarySource.length < FactReceiptPolicy.MIN_SOURCE_LENGTH
+            ) {
+                secondarySourceField.error =
+                    "Укажите источник полностью или отключите второй источник"
+                valid = false
+            }
+            if (!valid) return@setOnClickListener
+
+            val coverage = if (refineCoverage.isChecked) {
+                coverageButtons.entries.first { it.value.isChecked }.key
+            } else {
+                FactReceiptCoverage.CORE
+            }
+            val receipt = FactReceiptFactory.create(
+                eventId = event.id,
+                factor = factor,
+                statement = statement,
+                primarySource = primarySource,
+                secondarySource = secondarySource,
+                sourceAuditState = composer.effectiveAudit,
+                coverage = coverage,
+                checkedAt = System.currentTimeMillis()
+            )
+            state.saveFactReceipt(receipt)
+            dialog.dismiss()
+            Toast.makeText(
+                this,
+                "Квитанция сохранена • ${factReceiptSourceSummary(receipt)}",
+                Toast.LENGTH_SHORT
+            ).show()
+            rerenderContentPreservingScroll()
+            if (returnToRegister) {
+                showFactRegisterDialog(event)
+            }
+        }
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+            if (returnToRegister) {
+                showFactRegisterDialog(event)
+            }
+        }
+        refreshComposer()
         if (returnToRegister) {
             dialog.setOnCancelListener {
                 showFactRegisterDialog(event)
             }
         }
         dialog.show()
+        dialog.window?.setLayout(
+            dp(factReceiptDialogWidthDp()),
+            dp(factReceiptDialogHeightDp())
+        )
+    }
+
+    private fun factReceiptDialogWidthDp(): Int {
+        return min(
+            560,
+            resources.configuration.screenWidthDp - 24
+        ).coerceAtLeast(280)
+    }
+
+    private fun factReceiptDialogHeightDp(): Int {
+        val preferred = if (effectiveFontScale() >= 1.8f) 720 else 760
+        return min(
+            preferred,
+            resources.configuration.screenHeightDp - 104
+        ).coerceAtLeast(420)
     }
 
     private fun showFactRegisterDialog(event: SportEvent) {
@@ -18409,6 +18699,25 @@ class MainActivity : Activity() {
             minHeight = dp(48)
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(3), 0, dp(3))
+        }
+    }
+
+    private fun factReceiptComposerTone(
+        status: FactReceiptComposerStatus
+    ): Tone {
+        return when (status) {
+            FactReceiptComposerStatus.STATEMENT_REQUIRED,
+            FactReceiptComposerStatus.PRIMARY_SOURCE_REQUIRED,
+            FactReceiptComposerStatus.SECONDARY_SOURCE_REQUIRED ->
+                Tone(AppColors.signal, AppColors.signalSoft)
+            FactReceiptComposerStatus.SINGLE_SOURCE_READY,
+            FactReceiptComposerStatus.SOURCE_RELATION_REQUIRED,
+            FactReceiptComposerStatus.SHARED_LINEAGE ->
+                Tone(AppColors.warning, AppColors.warningSoft)
+            FactReceiptComposerStatus.INDEPENDENT_QUORUM ->
+                Tone(AppColors.accentDark, AppColors.accentSoft)
+            FactReceiptComposerStatus.CONFLICT ->
+                Tone(AppColors.danger, AppColors.dangerSoft)
         }
     }
 
@@ -21813,7 +22122,7 @@ class MainActivity : Activity() {
                 guideStepRow(
                     number = "4",
                     title = "Проверьте один пробел",
-                    body = "Запишите один проверяемый факт и его источник. Для независимой сверки добавьте второй источник с другим происхождением."
+                    body = "Сначала запишите один факт и первичный источник. Этого достаточно для уровня «1 источник». Второй источник и полноту открывайте только после отдельной проверки."
                 ),
                 matchWrap(top = 10)
             )
@@ -21936,7 +22245,7 @@ class MainActivity : Activity() {
             addView(
                 dictionaryRow(
                     "Факт-квитанция",
-                    "Один локальный тезис, его источники, связь между ними и SHA-256-метка. Квитанция сама обновляет полноту и уровень подтверждения выбранного фактора."
+                    "Один локальный тезис и его происхождение. Форма ведёт по двум обязательным шагам, а второй источник, связь и полноту показывает только по запросу. Квитанция сама обновляет уровень выбранного фактора и получает SHA-256-метку."
                 ),
                 matchWrap(top = 9)
             )
@@ -22130,8 +22439,8 @@ class MainActivity : Activity() {
             ),
             Triple(
                 "4. Закройте один пробел",
-                "Запишите один проверяемый факт и его источник. Для независимой сверки добавьте второй источник, который не повторяет ту же публикацию.",
-                "Если источники расходятся или устарели, приложение оставит стоп-сигнал и предложит перепроверку."
+                "Сначала запишите один проверяемый факт и первичный источник. Затем сохраните уровень «1 источник» или отдельно включите второй источник и укажите их фактическую связь.",
+                "Одинаковое происхождение не создаст кворум. Расхождение останется стоп-сигналом, а полнота проверки не означает вероятность исхода."
             ),
             Triple(
                 "5. Зафиксируйте решение",
