@@ -1,12 +1,12 @@
-# Спорт Пульс 3.0.0 (72)
+# Спорт Пульс 3.1.0 (73)
 
 ## Подписанный Android App Bundle
 
-- Файл: `SportPulse-3.0.0-72-signed.aab`
+- Файл: `SportPulse-3.1.0-73-signed.aab`
 - Package name: `ru.sportpulse.info`
-- Version name: `3.0.0`
-- Version code: `72`
-- SHA-256: `b7441ac10cc141e69b4f4fefca1f6f8f7d34b1e2a28a54bfcfb3e89ff9784329`
+- Version name: `3.1.0`
+- Version code: `73`
+- SHA-256: `740895eb0542cef4b59c9e8c588ed4cc5cc4e7a27ffd70566a7457cae3eb8e01`
 
 Bundle собран задачей `bundleRelease` и проверен командой `jarsigner -verify -verbose -certs`: `jar verified`.
 

@@ -11030,6 +11030,28 @@ class MainActivity : Activity() {
             ),
             matchWrap(top = 7)
         )
+        panel.addView(
+            decisionDeskScenarioFork(
+                draft = draft,
+                result = result,
+                onFieldSelected = { field ->
+                    when (field) {
+                        DecisionDeskField.THESIS ->
+                            focusDecisionDeskInput(thesisInput)
+                        DecisionDeskField.COUNTERARGUMENT ->
+                            focusDecisionDeskInput(
+                                counterargumentInput
+                            )
+                        DecisionDeskField.STOP_CONDITION ->
+                            focusDecisionDeskInput(
+                                stopConditionInput
+                            )
+                    }
+                },
+                onFactorSelected = ::openPulseFactor
+            ),
+            matchWrap(top = 18)
+        )
 
         panel.addView(
             text(
@@ -11229,6 +11251,198 @@ class MainActivity : Activity() {
             matchWrap(top = 16)
         )
         return panel
+    }
+
+    private fun decisionDeskScenarioFork(
+        draft: DecisionDeskDraft,
+        result: DecisionDeskResult,
+        onFieldSelected: (DecisionDeskField) -> Unit,
+        onFactorSelected: (SignalFactor) -> Unit
+    ): LinearLayout {
+        val fork = ScenarioForkEngine.evaluate(
+            draft = draft,
+            decision = result
+        )
+        val tone = scenarioForkTone(fork.state)
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                label(
+                    fork.state.badgeTitle,
+                    tone.background,
+                    tone.foreground
+                )
+            )
+            addView(
+                text(
+                    "Развилка матча",
+                    21f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 7)
+            )
+            addView(
+                text(
+                    fork.headline,
+                    15f,
+                    tone.foreground,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 3)
+            )
+            addView(
+                text(
+                    fork.explanation,
+                    13f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 3)
+            )
+            addView(
+                imageFrame().apply {
+                    addView(
+                        ImageView(this@MainActivity).apply {
+                            setImageResource(
+                                R.drawable.scenario_fork
+                            )
+                            scaleType =
+                                ImageView.ScaleType.CENTER_CROP
+                            contentDescription =
+                                "Два равноправных сценария матча, общий центр доказательств и красная стоп-линия"
+                        },
+                        frameMatch()
+                    )
+                },
+                matchFixed(176, top = 12)
+            )
+            addView(
+                scenarioForkRow(
+                    marker = "A",
+                    title = "Сценарий A",
+                    body = fork.primaryScenario,
+                    color = AppColors.accentDark,
+                    onClick = {
+                        onFieldSelected(DecisionDeskField.THESIS)
+                    }
+                ),
+                matchWrap(top = 9)
+            )
+            addView(
+                scenarioForkRow(
+                    marker = "B",
+                    title = "Сценарий B",
+                    body = fork.alternativeScenario,
+                    color = AppColors.signal,
+                    onClick = {
+                        onFieldSelected(
+                            DecisionDeskField.COUNTERARGUMENT
+                        )
+                    }
+                ),
+                matchWrap(top = 7)
+            )
+            addView(
+                scenarioForkRow(
+                    marker = "!",
+                    title = "Стоп-линия",
+                    body = fork.stopCondition,
+                    color = AppColors.danger,
+                    onClick = {
+                        onFieldSelected(
+                            DecisionDeskField.STOP_CONDITION
+                        )
+                    }
+                ),
+                matchWrap(top = 7)
+            )
+            fork.distinguishingFactor?.let { factor ->
+                addView(
+                    scenarioForkRow(
+                        marker = "04",
+                        title = "Различающий факт",
+                        body = factor.title,
+                        color = tone.foreground,
+                        onClick = {
+                            onFactorSelected(factor)
+                        }
+                    ),
+                    matchWrap(top = 7)
+                )
+            }
+        }
+    }
+
+    private fun scenarioForkRow(
+        marker: String,
+        title: String,
+        body: String,
+        color: Int,
+        onClick: () -> Unit
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+            background = rippleRounded(
+                AppColors.background,
+                6,
+                AppColors.line,
+                1
+            )
+            setPadding(dp(11), dp(10), dp(11), dp(10))
+            isClickable = true
+            isFocusable = true
+            contentDescription = "$title: $body"
+            setOnClickListener { onClick() }
+            addView(
+                text(
+                    marker,
+                    fixedControlTextSize(11.5f),
+                    color,
+                    Typeface.BOLD
+                ).apply {
+                    gravity = Gravity.CENTER
+                    background = rounded(
+                        Color.TRANSPARENT,
+                        16,
+                        color,
+                        1
+                    )
+                },
+                LinearLayout.LayoutParams(dp(34), dp(34)).apply {
+                    rightMargin = dp(10)
+                }
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(
+                        text(
+                            title.uppercase(
+                                Locale.getDefault()
+                            ),
+                            10.5f,
+                            color,
+                            Typeface.BOLD
+                        )
+                    )
+                    addView(
+                        text(
+                            body,
+                            13.5f,
+                            AppColors.ink,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 2)
+                    )
+                },
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+        }
     }
 
     private fun decisionDeskQuestionBand(
@@ -11649,8 +11863,8 @@ class MainActivity : Activity() {
         val steps = listOf(
             "Выберите тип проверки",
             "Сформулируйте тезис",
-            "Запишите сильный контраргумент",
-            "Задайте наблюдаемое условие отмены",
+            "Постройте альтернативу в Развилке матча",
+            "Проведите наблюдаемую стоп-линию",
             "Проверьте пять факторов и зафиксируйте статус"
         )
         return LinearLayout(this).apply {
@@ -11829,6 +12043,24 @@ class MainActivity : Activity() {
                 Tone(AppColors.warning, AppColors.warningSoft)
             DecisionDeskStatus.FACTS_READY ->
                 Tone(AppColors.accent, AppColors.accentSoft)
+        }
+    }
+
+    private fun scenarioForkTone(
+        state: ScenarioForkState
+    ): Tone {
+        return when (state) {
+            ScenarioForkState.PRIMARY_REQUIRED,
+            ScenarioForkState.ALTERNATIVE_REQUIRED,
+            ScenarioForkState.STOP_REQUIRED,
+            ScenarioForkState.OPEN ->
+                Tone(AppColors.warning, AppColors.warningSoft)
+            ScenarioForkState.EVIDENCE_REQUIRED ->
+                Tone(AppColors.signal, AppColors.signalSoft)
+            ScenarioForkState.BLOCKED ->
+                Tone(AppColors.danger, AppColors.dangerSoft)
+            ScenarioForkState.VERIFIED ->
+                Tone(AppColors.accentDark, AppColors.accentSoft)
         }
     }
 
@@ -21243,8 +21475,8 @@ class MainActivity : Activity() {
             addView(
                 guideStepRow(
                     number = "2",
-                    title = "Соберите замысел",
-                    body = "В «Штабе» выберите тип проверки, запишите тезис, сильный контраргумент и наблюдаемое условие отмены."
+                    title = "Соберите развилку",
+                    body = "В «Штабе» постройте сценарии A и B, затем проведите наблюдаемую стоп-линию. Развилка покажет факт, который лучше всего разделит версии."
                 ),
                 matchWrap(top = 10)
             )
@@ -21330,6 +21562,13 @@ class MainActivity : Activity() {
                     "Единый маршрут матча: тип проверки, тезис, контраргумент, условие отмены и текущий статус. Вкладки «История» и «Профиль» оценивают процесс без коэффициентов, сумм и доходности."
                 ),
                 matchWrap(top = 11)
+            )
+            addView(
+                dictionaryRow(
+                    "Развилка матча",
+                    "Две равноправные версии и заранее заданная стоп-линия. После заполнения приложение показывает один различающий фактор, но не выбирает удобный сценарий и не прогнозирует исход."
+                ),
+                matchWrap(top = 9)
             )
             addView(
                 dictionaryRow(
@@ -21559,9 +21798,9 @@ class MainActivity : Activity() {
                 "Время и статус берутся из расписания. Перед решением всё равно сверьте их с официальным источником."
             ),
             Triple(
-                "2. Соберите замысел",
-                "В «Штабе» выберите тип проверки, запишите тезис, сильный контраргумент и условие, которое сразу отменит идею.",
-                "Незаполненный замысел получает статус «Стоп»: его нельзя честно проверить после матча."
+                "2. Соберите развилку",
+                "В «Штабе» постройте сценарии A и B и проведите стоп-линию. Развилка покажет один факт, который лучше всего разделит две версии.",
+                "Незаполненная развилка получает статус «Стоп». Приложение не выбирает удобный сценарий за пользователя."
             ),
             Triple(
                 "3. Прочитайте статус",

@@ -240,6 +240,10 @@ class TextLayoutInstrumentationTest {
         clickTab("Штаб")
         assertTextPresent("Замысел ещё не проверяем")
         assertTextPresent("Что изменилось?")
+        assertTextPresent("Развилка матча")
+        assertContentDescriptionStartingWith(
+            "Два равноправных сценария матча"
+        )
         audit("Штаб / Решение", failures)
         clickContentDescription("Штаб: История")
         assertTextPresent("История процесса, а не выигрышей")
