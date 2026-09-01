@@ -88,8 +88,8 @@ android {
         minSdk = 26
         targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 74
-        versionName = "3.2.0"
+        versionCode = 75
+        versionName = "3.3.0"
         buildConfigField(
             "String",
             "SPORTS_SCHEDULE_PROXY_URL",

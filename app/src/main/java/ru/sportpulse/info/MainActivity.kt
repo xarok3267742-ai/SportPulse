@@ -227,7 +227,7 @@ class MainActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(16), dp(18), dp(34))
+            setPadding(dp(18), dp(12), dp(18), dp(34))
         }
         val availableWidth = resources.displayMetrics.widthPixels
         holder.addView(
@@ -240,12 +240,12 @@ class MainActivity : Activity() {
         )
 
         root.addView(appHeader(), matchWrap())
-        root.addView(hero(), matchFixed(heroHeightDp(), top = 12))
+        root.addView(hero(), matchFixed(heroHeightDp(), top = 8))
 
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
-        root.addView(content, matchWrap(top = 10))
+        root.addView(content, matchWrap(top = 6))
 
         appShell.addView(
             mainScroll,
@@ -855,6 +855,9 @@ class MainActivity : Activity() {
     }
 
     private fun hero(): FrameLayout {
+        val compactViewport =
+            resources.configuration.fontScale < 1.3f &&
+                resources.configuration.screenHeightDp < 840
         val frame = imageFrame()
         frame.addView(
             ImageView(this).apply {
@@ -889,7 +892,7 @@ class MainActivity : Activity() {
                 Gravity.TOP or Gravity.START
             ).apply {
                 leftMargin = dp(16)
-                topMargin = dp(16)
+                topMargin = dp(if (compactViewport) 10 else 16)
             }
         )
 
@@ -902,14 +905,18 @@ class MainActivity : Activity() {
                 12.5f,
                 Color.rgb(228, 235, 237),
                 Typeface.BOLD
-            )
+            ).apply {
+                visibility = if (compactViewport) View.GONE else View.VISIBLE
+            }
             addView(heroTimeline, matchWrap(top = 2))
             heroStatus = text(
                 briefing.catalogText(),
                 11f,
                 Color.rgb(194, 211, 215),
                 Typeface.BOLD
-            )
+            ).apply {
+                visibility = if (compactViewport) View.GONE else View.VISIBLE
+            }
             addView(heroStatus, matchWrap(top = 2))
         }
         frame.addView(
@@ -921,7 +928,7 @@ class MainActivity : Activity() {
             ).apply {
                 leftMargin = dp(18)
                 rightMargin = dp(18)
-                bottomMargin = dp(18)
+                bottomMargin = dp(if (compactViewport) 10 else 18)
             }
         )
         return frame
@@ -958,10 +965,20 @@ class MainActivity : Activity() {
     }
 
     private fun tabBar(): HorizontalScrollView {
+        val compactWidth =
+            resources.configuration.screenWidthDp < 360
         val fontScale = resources.configuration.fontScale
             .coerceAtLeast(1f)
+        val maximumTextScale = if (compactWidth) {
+            1.08f
+        } else {
+            1.25f
+        }
         val tabTextSize = 14f *
-            min(fontScale, 1.25f) / fontScale
+            min(fontScale, maximumTextScale) / fontScale
+        val tabHorizontalPadding = if (compactWidth) 5 else 8
+        val tabMinimumWidth = if (compactWidth) 48 else 52
+        val tabSpacing = if (compactWidth) 0 else 2
         tabScroller = HorizontalScrollView(this).apply {
             isFillViewport = true
             isHorizontalScrollBarEnabled = false
@@ -987,16 +1004,20 @@ class MainActivity : Activity() {
                 Typeface.BOLD
             ).apply {
                 gravity = Gravity.CENTER
-                minWidth = dp(52)
+                minWidth = dp(tabMinimumWidth)
                 minHeight = dp(50)
-                setPadding(dp(8), 0, dp(8), 0)
-                isClickable = true
-                isFocusable = true
+                setPadding(
+                    dp(tabHorizontalPadding),
+                    0,
+                    dp(tabHorizontalPadding),
+                    0
+                )
+                applyAccessibleAction(dp(48))
                 contentDescription = "Раздел $title"
                 setOnClickListener { selectTab(index) }
             }
             tabViews.add(tab)
-            row.addView(tab, wrapWrap(right = 2))
+            row.addView(tab, wrapWrap(right = tabSpacing))
         }
         tabScroller.addView(row)
         updateTabs()
@@ -1148,7 +1169,7 @@ class MainActivity : Activity() {
         content.addView(
             sectionTitle(
                 "Матч-центр",
-                "Россия и СНГ: матчи и следующий шаг проверки."
+                "Россия и СНГ • следующий шаг проверки."
             )
         )
         content.addView(
@@ -4315,8 +4336,7 @@ class MainActivity : Activity() {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(3), dp(7), dp(3), dp(8))
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
             background = rippleRounded(AppColors.surface, 6)
             setOnClickListener { onClick() }
             contentDescription =
@@ -4726,8 +4746,7 @@ class MainActivity : Activity() {
         val action = BlindRoundText.actionTitle(card)
         val point = BlindRoundText.pointTitle(card, selectedZone)
         return this@MainActivity.card().apply {
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
             background = rippleRounded(AppColors.surface, 6)
             setOnClickListener { onSelect() }
             contentDescription =
@@ -5032,8 +5051,7 @@ class MainActivity : Activity() {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(3), dp(7), dp(3), dp(8))
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
             background = rippleRounded(AppColors.surface, 6)
             setOnClickListener { onClick() }
             contentDescription =
@@ -5588,8 +5606,7 @@ class MainActivity : Activity() {
                 matchWrap(top = 5)
             )
             if (canOpen) {
-                isClickable = true
-                isFocusable = true
+                applyAccessibleAction(dp(48))
                 contentDescription =
                     "Открыть событие с изменениями: ${change.match}"
                 setOnClickListener {
@@ -5957,7 +5974,12 @@ class MainActivity : Activity() {
 
         return card(padding = 0).apply {
             clipToOutline = true
-            addView(image, matchFixed(142))
+            addView(
+                image,
+                matchFixed(
+                    142 + compactLargeTextExtraDp(48)
+                )
+            )
             addView(body, matchWrap())
         }
     }
@@ -6390,7 +6412,7 @@ class MainActivity : Activity() {
         return parts.joinToString("\n")
     }
 
-    private fun filterBar(): AdaptiveWrapLayout {
+    private fun filterBar(): HorizontalScrollView {
         val filterState = SportFilterPolicy.evaluate(
             catalogSports = catalogEvents.map(SportEvent::sport),
             catalogEventIds = catalogEvents.mapTo(linkedSetOf()) {
@@ -6403,51 +6425,71 @@ class MainActivity : Activity() {
         val filters = filterState.filters
         activeSportFilter = filterState.selectedFilter
         savedOnly = filterState.savedOnly
-        return AdaptiveWrapLayout(this).apply {
+        var selectedChip: View? = null
+        val row = AdaptiveWrapLayout(this).apply {
             tag = AdaptiveGroupTags.SPORT_FILTERS
-            lineSpacingPx = dp(7)
             filters.forEach { filter ->
                 val selected =
                     !savedOnly && activeSportFilter == filter
-                addView(
-                    filterChip(
-                        title = filter,
-                        selected = selected
-                    ) {
-                        activeSportFilter = filter
-                        savedOnly = false
-                        focusEventLimit = FOCUS_EVENT_PAGE_SIZE
-                        renderContent()
-                    }.apply {
-                        isSelected = selected
-                        contentDescription = if (selected) {
-                            "Вид спорта $filter, выбрано"
-                        } else {
-                            "Фильтр по виду спорта $filter"
-                        }
-                    },
-                    wrapWrap(right = 7)
-                )
+                val chip = filterChip(
+                    title = filter,
+                    selected = selected
+                ) {
+                    activeSportFilter = filter
+                    savedOnly = false
+                    focusEventLimit = FOCUS_EVENT_PAGE_SIZE
+                    renderContent()
+                }.apply {
+                    isSelected = selected
+                    contentDescription = if (selected) {
+                        "Вид спорта $filter, выбрано"
+                    } else {
+                        "Фильтр по виду спорта $filter"
+                    }
+                }
+                if (selected) selectedChip = chip
+                addView(chip, wrapWrap(right = 7))
             }
             if (filterState.showSavedFilter) {
-                addView(
-                    filterChip(
-                        title = "★ Сохраненные",
-                        selected = savedOnly
-                    ) {
-                        savedOnly = !savedOnly
-                        focusEventLimit = FOCUS_EVENT_PAGE_SIZE
-                        renderContent()
-                    }.apply {
-                        isSelected = savedOnly
-                        contentDescription = if (savedOnly) {
-                            "Только сохраненные события, выбрано"
-                        } else {
-                            "Показать только сохраненные события"
-                        }
-                    },
-                    wrapWrap()
+                val chip = filterChip(
+                    title = "★ Сохраненные",
+                    selected = savedOnly
+                ) {
+                    savedOnly = !savedOnly
+                    focusEventLimit = FOCUS_EVENT_PAGE_SIZE
+                    renderContent()
+                }.apply {
+                    isSelected = savedOnly
+                    contentDescription = if (savedOnly) {
+                        "Только сохраненные события, выбрано"
+                    } else {
+                        "Показать только сохраненные события"
+                    }
+                }
+                if (savedOnly) selectedChip = chip
+                addView(chip, wrapWrap())
+            }
+        }
+        return HorizontalScrollView(this).apply {
+            isFillViewport = true
+            isHorizontalScrollBarEnabled = false
+            clipToPadding = false
+            isHorizontalFadingEdgeEnabled = true
+            setFadingEdgeLength(dp(12))
+            addView(
+                row,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
                 )
+            )
+            post {
+                selectedChip?.let { chip ->
+                    scrollTo(
+                        (chip.left - dp(8)).coerceAtLeast(0),
+                        0
+                    )
+                }
             }
         }
     }
@@ -6618,27 +6660,48 @@ class MainActivity : Activity() {
                     Typeface.BOLD
                 )
             )
+            var selectedChip: View? = null
+            val row = AdaptiveWrapLayout(this@MainActivity).apply {
+                tag = AdaptiveGroupTags.TIME_FILTERS
+                filters.forEach { filter ->
+                    val selected = filter == activeFeedTimeFilter
+                    val chip = filterChip(
+                        title = "${filter.title} ${summary.count(filter)}",
+                        selected = selected
+                    ) {
+                        activeFeedTimeFilter = filter
+                        focusEventLimit = FOCUS_EVENT_PAGE_SIZE
+                        rerenderContentPreservingScroll()
+                    }.apply {
+                        isSelected = selected
+                        contentDescription =
+                            "Период ${filter.title.lowercase(Locale.getDefault())}: ${eventCountText(summary.count(filter))}"
+                    }
+                    if (selected) selectedChip = chip
+                    addView(chip, wrapWrap(right = 7))
+                }
+            }
             addView(
-                AdaptiveWrapLayout(this@MainActivity).apply {
-                    tag = AdaptiveGroupTags.TIME_FILTERS
-                    lineSpacingPx = dp(7)
-                    filters.forEach { filter ->
-                        val selected = filter == activeFeedTimeFilter
-                        addView(
-                            filterChip(
-                                title = "${filter.title} ${summary.count(filter)}",
-                                selected = selected
-                            ) {
-                                activeFeedTimeFilter = filter
-                                focusEventLimit = FOCUS_EVENT_PAGE_SIZE
-                                rerenderContentPreservingScroll()
-                            }.apply {
-                                isSelected = selected
-                                contentDescription =
-                                    "Период ${filter.title.lowercase(Locale.getDefault())}: ${eventCountText(summary.count(filter))}"
-                            },
-                            wrapWrap(right = 7)
+                HorizontalScrollView(this@MainActivity).apply {
+                    isFillViewport = true
+                    isHorizontalScrollBarEnabled = false
+                    clipToPadding = false
+                    isHorizontalFadingEdgeEnabled = true
+                    setFadingEdgeLength(dp(12))
+                    addView(
+                        row,
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT
                         )
+                    )
+                    post {
+                        selectedChip?.let { chip ->
+                            scrollTo(
+                                (chip.left - dp(8)).coerceAtLeast(0),
+                                0
+                            )
+                        }
                     }
                 },
                 matchWrap(top = 7)
@@ -6734,16 +6797,16 @@ class MainActivity : Activity() {
             Typeface.BOLD
         ).apply {
             gravity = Gravity.CENTER
-            minHeight = dp(40)
+            minHeight = dp(48)
             setPadding(dp(14), 0, dp(14), 0)
             background = rippleRounded(
                 if (selected) AppColors.signal else AppColors.surface,
-                20,
+                24,
                 if (selected) AppColors.signal else AppColors.line,
                 1
             )
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
+            isSelected = selected
             setOnClickListener { onClick() }
         }
     }
@@ -6794,9 +6857,8 @@ class MainActivity : Activity() {
             Typeface.BOLD
         ).apply {
             gravity = Gravity.CENTER
-            background = rounded(Color.argb(185, 14, 20, 24), 22)
-            isClickable = true
-            isFocusable = true
+            background = rounded(Color.argb(185, 14, 20, 24), 24)
+            applyAccessibleAction(dp(48))
             contentDescription = if (initiallySaved) {
                 "Убрать событие из сохраненных"
             } else {
@@ -6821,7 +6883,7 @@ class MainActivity : Activity() {
         }
         visual.addView(
             bookmark,
-            FrameLayout.LayoutParams(dp(44), dp(44), Gravity.TOP or Gravity.END).apply {
+            FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.END).apply {
                 rightMargin = dp(10)
                 topMargin = dp(8)
             }
@@ -6972,7 +7034,7 @@ class MainActivity : Activity() {
                         Typeface.BOLD
                     ).apply {
                         gravity = Gravity.CENTER
-                        minHeight = dp(46)
+                        minHeight = dp(48)
                         setPadding(dp(8), dp(8), dp(8), dp(8))
                         background = rippleRounded(
                             if (selected) {
@@ -6982,8 +7044,7 @@ class MainActivity : Activity() {
                             },
                             6
                         )
-                        isClickable = true
-                        isFocusable = true
+                        applyAccessibleAction(dp(48))
                         isSelected = selected
                         contentDescription = "Режим раздела Матчи: $title"
                         setOnClickListener {
@@ -7598,8 +7659,7 @@ class MainActivity : Activity() {
                 },
                 0
             )
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
             contentDescription = buildString {
                 append("Открыть анализ: ${event.match}. ")
                 append("$displayedTime. ${event.tournament}, ${event.region}.")
@@ -7616,9 +7676,8 @@ class MainActivity : Activity() {
             Typeface.BOLD
         ).apply {
             gravity = Gravity.CENTER
-            background = rippleRounded(AppColors.background, 20)
-            isClickable = true
-            isFocusable = true
+            background = rippleRounded(AppColors.background, 24)
+            applyAccessibleAction(dp(48))
             contentDescription = if (initiallySaved) {
                 "Убрать событие из сохраненных"
             } else {
@@ -7659,7 +7718,7 @@ class MainActivity : Activity() {
                 )
                 addView(
                     bookmark,
-                    LinearLayout.LayoutParams(dp(40), dp(40))
+                    LinearLayout.LayoutParams(dp(48), dp(48))
                 )
             }
         )
@@ -8425,23 +8484,22 @@ class MainActivity : Activity() {
                             Typeface.BOLD
                         ).apply {
                             gravity = Gravity.CENTER
-                            minWidth = dp(42)
-                            minHeight = dp(42)
+                            minWidth = dp(48)
+                            minHeight = dp(48)
                             background = rippleRounded(
                                 AppColors.field,
-                                21,
+                                24,
                                 AppColors.fieldSignal,
                                 1
                             )
-                            isClickable = true
-                            isFocusable = true
+                            applyAccessibleAction(dp(48))
                             contentDescription =
                                 "Как читать карту данных"
                             setOnClickListener {
                                 showPlainAnalyticsGuide()
                             }
                         },
-                        LinearLayout.LayoutParams(dp(42), dp(42)).apply {
+                        LinearLayout.LayoutParams(dp(48), dp(48)).apply {
                             leftMargin = dp(10)
                         }
                     )
@@ -8747,7 +8805,7 @@ class MainActivity : Activity() {
                         Typeface.BOLD
                     ).apply {
                         gravity = Gravity.CENTER
-                        minHeight = dp(46)
+                        minHeight = dp(48)
                         background = rippleRounded(
                             if (selected) {
                                 AppColors.accent
@@ -8756,8 +8814,7 @@ class MainActivity : Activity() {
                             },
                             6
                         )
-                        isClickable = true
-                        isFocusable = true
+                        applyAccessibleAction(dp(48))
                         isSelected = selected
                         contentDescription =
                             "Режим анализа: $title"
@@ -8767,7 +8824,7 @@ class MainActivity : Activity() {
                     },
                     LinearLayout.LayoutParams(
                         0,
-                        dp(46),
+                        dp(48),
                         1f
                     ).apply {
                         if (index == 0) rightMargin = dp(4)
@@ -8945,8 +9002,7 @@ class MainActivity : Activity() {
                                     },
                                     1
                                 )
-                                isClickable = true
-                                isFocusable = true
+                                applyAccessibleAction(dp(48))
                                 isSelected = selected
                                 contentDescription = buildString {
                                     append(
@@ -11015,12 +11071,21 @@ class MainActivity : Activity() {
     }
 
     private fun decisionDeskSectionSwitcher(): LinearLayout {
+        val stackSections =
+            resources.configuration.fontScale >= 1.8f ||
+                resources.configuration.screenWidthDp < 360
         return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            weightSum = DecisionDeskSection.values().size.toFloat()
+            orientation = if (stackSections) {
+                LinearLayout.VERTICAL
+            } else {
+                LinearLayout.HORIZONTAL
+            }
+            if (!stackSections) {
+                weightSum = DecisionDeskSection.values().size.toFloat()
+            }
             background = rounded(AppColors.field, 8)
             setPadding(dp(5), dp(5), dp(5), dp(5))
-            DecisionDeskSection.values().forEach { section ->
+            DecisionDeskSection.values().forEachIndexed { index, section ->
                 val selected = section == activeDecisionDeskSection
                 addView(
                     text(
@@ -11034,7 +11099,7 @@ class MainActivity : Activity() {
                         Typeface.BOLD
                     ).apply {
                         gravity = Gravity.CENTER
-                        minHeight = dp(44)
+                        minHeight = dp(48)
                         maxLines = 2
                         setPadding(dp(5), 0, dp(5), 0)
                         background = rippleRounded(
@@ -11045,8 +11110,8 @@ class MainActivity : Activity() {
                             },
                             5
                         )
-                        isClickable = true
-                        isFocusable = true
+                        applyAccessibleAction(dp(48))
+                        isSelected = selected
                         contentDescription =
                             "Штаб: ${section.title}"
                         setOnClickListener {
@@ -11056,16 +11121,25 @@ class MainActivity : Activity() {
                             }
                         }
                     },
-                    LinearLayout.LayoutParams(
-                        0,
-                        dp(44),
-                        1f
-                    ).apply {
-                        if (
-                            section !=
-                            DecisionDeskSection.PROFILE
-                        ) {
-                            rightMargin = dp(4)
+                    if (stackSections) {
+                        LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            if (index > 0) topMargin = dp(4)
+                        }
+                    } else {
+                        LinearLayout.LayoutParams(
+                            0,
+                            dp(48),
+                            1f
+                        ).apply {
+                            if (
+                                section !=
+                                DecisionDeskSection.PROFILE
+                            ) {
+                                rightMargin = dp(4)
+                            }
                         }
                     }
                 )
@@ -11188,7 +11262,7 @@ class MainActivity : Activity() {
                         ).apply {
                             gravity = Gravity.CENTER
                             minWidth = dp(64)
-                            minHeight = dp(42)
+                            minHeight = dp(48)
                             setPadding(dp(12), 0, dp(12), 0)
                             background = rippleRounded(
                                 if (selected) {
@@ -11204,6 +11278,7 @@ class MainActivity : Activity() {
                                 },
                                 1
                             )
+                            applyAccessibleAction(dp(48))
                             isEnabled = applicable
                             alpha = if (applicable) 1f else 0.45f
                             isClickable = applicable
@@ -11494,8 +11569,7 @@ class MainActivity : Activity() {
                 1
             )
             setPadding(dp(11), dp(10), dp(11), dp(10))
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
             contentDescription = "$title: $body"
             setOnClickListener { onClick() }
             addView(
@@ -14049,7 +14123,7 @@ class MainActivity : Activity() {
                     Typeface.BOLD
                 ).apply {
                     gravity = Gravity.CENTER
-                    minHeight = dp(40)
+                    minHeight = dp(48)
                     setPadding(dp(10), 0, dp(10), 0)
                     background = rippleRounded(
                         Color.argb(190, 13, 30, 33),
@@ -14057,18 +14131,17 @@ class MainActivity : Activity() {
                         Color.argb(150, 255, 255, 255),
                         1
                     )
-                    isClickable = true
-                    isFocusable = true
+                    applyAccessibleAction(dp(48))
                     contentDescription = "Сменить событие анализа"
                     setOnClickListener { selectTab(0) }
                 },
                 FrameLayout.LayoutParams(
                     if (compactChangeAction) {
-                        dp(44)
+                        dp(48)
                     } else {
                         FrameLayout.LayoutParams.WRAP_CONTENT
                     },
-                    dp(40),
+                    dp(48),
                     Gravity.TOP or Gravity.END
                 ).apply {
                     rightMargin = dp(14)
@@ -14432,7 +14505,7 @@ class MainActivity : Activity() {
                                 )
                             }
                         }.apply {
-                            minHeight = dp(44)
+                            minHeight = dp(48)
                             setPadding(
                                 dp(11),
                                 dp(8),
@@ -14670,8 +14743,7 @@ class MainActivity : Activity() {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(3), dp(7), dp(3), dp(8))
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
             background = rippleRounded(AppColors.surface, 6)
             setOnClickListener { onClick() }
             contentDescription =
@@ -16823,7 +16895,7 @@ class MainActivity : Activity() {
                                 )
                             }
                         }.apply {
-                            minHeight = dp(44)
+                            minHeight = dp(48)
                             setPadding(
                                 dp(11),
                                 dp(8),
@@ -20205,7 +20277,7 @@ class MainActivity : Activity() {
                                 Typeface.BOLD
                             ).apply {
                                 gravity = Gravity.CENTER
-                                minHeight = dp(44)
+                                minHeight = dp(48)
                                 setPadding(
                                     dp(8),
                                     dp(7),
@@ -20222,8 +20294,8 @@ class MainActivity : Activity() {
                                     tone.foreground,
                                     1
                                 )
-                                isClickable = true
-                                isFocusable = true
+                                applyAccessibleAction(dp(48))
+                                this.isSelected = isSelected
                                 contentDescription =
                                     "${factor.title}: ${outcome.title}"
                                 setOnClickListener {
@@ -20820,15 +20892,14 @@ class MainActivity : Activity() {
                 ).apply {
                     gravity = Gravity.CENTER
                     minWidth = dp(58)
-                    minHeight = dp(42)
+                    minHeight = dp(48)
                     setPadding(
                         dp(10),
                         dp(7),
                         dp(10),
                         dp(7)
                     )
-                    isClickable = true
-                    isFocusable = true
+                    applyAccessibleAction(dp(48))
                     contentDescription =
                         "Выбрать ${item.guide.title}"
                 }
@@ -22717,7 +22788,9 @@ class MainActivity : Activity() {
 
             panel.addView(
                 attentionBudgetHeader(),
-                matchFixed(132)
+                matchFixed(
+                    132 + compactLargeTextExtraDp(4)
+                )
             )
             panel.addView(
                 LinearLayout(this).apply {
@@ -23024,7 +23097,9 @@ class MainActivity : Activity() {
 
             panel.addView(
                 decisionLedgerHeader(),
-                matchFixed(132)
+                matchFixed(
+                    132 + compactLargeTextExtraDp(4)
+                )
             )
             panel.addView(
                 LinearLayout(this).apply {
@@ -23753,7 +23828,7 @@ class MainActivity : Activity() {
                         onSelected(DecisionDistanceAnswer.NO)
                     }
                 ),
-                LinearLayout.LayoutParams(dp(62), dp(44)).apply {
+                LinearLayout.LayoutParams(dp(62), dp(48)).apply {
                     rightMargin = dp(6)
                 }
             )
@@ -23768,7 +23843,7 @@ class MainActivity : Activity() {
                         onSelected(DecisionDistanceAnswer.YES)
                     }
                 ),
-                LinearLayout.LayoutParams(dp(62), dp(44))
+                LinearLayout.LayoutParams(dp(62), dp(48))
             )
         }
         return LinearLayout(this).apply {
@@ -23832,8 +23907,8 @@ class MainActivity : Activity() {
                 if (selected) color else AppColors.line,
                 1
             )
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
+            isSelected = selected
             contentDescription = buildString {
                 append(factor.question)
                 append(" Ответ ")
@@ -24020,8 +24095,7 @@ class MainActivity : Activity() {
             setSingleLine(false)
             setPadding(dp(14), 0, dp(14), 0)
             background = rippleRounded(color, 8)
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
             setOnClickListener { onClick() }
         }
     }
@@ -24033,13 +24107,12 @@ class MainActivity : Activity() {
     ): TextView {
         return text(title, 13f, color, Typeface.BOLD).apply {
             gravity = Gravity.CENTER
-            minHeight = dp(42)
+            minHeight = dp(48)
             maxLines = 3
             setSingleLine(false)
             setPadding(dp(12), 0, dp(12), 0)
             background = rippleRounded(AppColors.surface, 8, color, 1)
-            isClickable = true
-            isFocusable = true
+            applyAccessibleAction(dp(48))
             setOnClickListener { onClick() }
         }
     }
@@ -24669,15 +24742,16 @@ class MainActivity : Activity() {
             configuration.fontScale >= 1.3f &&
                 configuration.screenWidthDp < 360 -> 220
             configuration.fontScale >= 1.3f -> 196
+            configuration.screenHeightDp < 840 -> 96
             else -> 128
         }
     }
 
     private fun searchControlHeightDp(): Int {
         return if (resources.configuration.fontScale >= 1.8f) {
-            56
+            58
         } else {
-            48
+            50
         }
     }
 
@@ -24721,7 +24795,19 @@ class MainActivity : Activity() {
             (resources.configuration.fontScale - 1f)
                 .coerceAtLeast(0f) * 30f
             ).toInt()
-        return baseDp + extra
+        return baseDp + extra + compactLargeTextExtraDp(64)
+    }
+
+    private fun compactLargeTextExtraDp(extraDp: Int): Int {
+        val configuration = resources.configuration
+        return if (
+            configuration.fontScale >= 1.8f &&
+            configuration.screenWidthDp < 360
+        ) {
+            extraDp
+        } else {
+            0
+        }
     }
 
     private fun fixedControlTextSize(baseSp: Float): Float {

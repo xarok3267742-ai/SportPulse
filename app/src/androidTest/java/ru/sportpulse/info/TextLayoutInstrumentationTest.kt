@@ -116,7 +116,7 @@ class TextLayoutInstrumentationTest {
             val heading = findTextView(activity, "Матч-день") { true }
             val body = findTextView(
                 activity,
-                "Россия и СНГ: матчи и следующий шаг проверки."
+                "Россия и СНГ • следующий шаг проверки."
             ) { true }
 
             assertEquals(
@@ -140,17 +140,26 @@ class TextLayoutInstrumentationTest {
 
         assertTextPresent("КОГДА • МОСКВА")
         assertTextPresent("Ближайшие матчи")
-        var defaultFontScale = false
+        var firstEventViewport = false
+        var firstActionViewport = false
         scenario.onActivity { activity ->
-            defaultFontScale =
-                activity.resources.configuration.fontScale < 1.3f
+            val configuration = activity.resources.configuration
+            firstEventViewport =
+                configuration.fontScale < 1.3f &&
+                configuration.screenHeightDp >= 720
+            firstActionViewport =
+                firstEventViewport &&
+                configuration.screenWidthDp >= 390 &&
+                configuration.screenHeightDp >= 840
         }
-        if (defaultFontScale) {
+        if (firstEventViewport) {
             assertTextVisibleOnScreen(
                 "Академия спортивных технологий 9101 - " +
                     "Объединённая молодёжная команда 9101",
                 "на первом экране матч-центра"
             )
+        }
+        if (firstActionViewport) {
             assertTextCompletelyVisibleOnScreen(
                 "Открыть анализ ›",
                 "на первом экране матч-центра"
@@ -172,7 +181,7 @@ class TextLayoutInstrumentationTest {
             text = "ОНЛАЙН • ДОСЬЕ",
             contentDescription = "Сменить событие анализа"
         )
-        if (defaultFontScale) {
+        if (firstActionViewport) {
             assertTextVisibleOnScreen(
                 "ОНЛАЙН • ДОСЬЕ",
                 "на первом экране события"

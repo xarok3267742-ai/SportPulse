@@ -48,10 +48,7 @@ internal class MarketLensView @JvmOverloads constructor(
         ((MarketKind) -> Unit)? = null
 
     init {
-        isClickable = true
-        isFocusable = true
-        importantForAccessibility =
-            IMPORTANT_FOR_ACCESSIBILITY_YES
+        applyAccessibleAction(dp(48f).toInt())
     }
 
     fun setOnMarketSelectedListener(
@@ -310,7 +307,7 @@ internal class MarketLensView @JvmOverloads constructor(
                     }
                 )
                 if (item.guide.kind == selected) {
-                    append(", выбрано")
+                    append(", текущий выбор")
                 }
                 append(". ")
             }

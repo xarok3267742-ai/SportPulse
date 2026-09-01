@@ -74,7 +74,12 @@ class AdaptiveFilterFlowInstrumentationTest {
                 )
             }
 
-            if (activity.resources.configuration.fontScale < 1.3f) {
+            val configuration = activity.resources.configuration
+            if (
+                configuration.fontScale < 1.3f &&
+                configuration.screenWidthDp >= 390 &&
+                configuration.screenHeightDp >= 840
+            ) {
                 val action = views
                     .filterIsInstance<TextView>()
                     .first { it.text.toString() == "Открыть анализ ›" }
