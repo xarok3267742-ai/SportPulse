@@ -2,6 +2,7 @@ package ru.sportpulse.info
 
 import android.content.Context
 import android.graphics.Rect
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.View
 import android.view.ViewGroup
 import android.view.inspector.WindowInspector
@@ -109,6 +110,17 @@ class ProductTourLayoutInstrumentationTest {
                 visible.width() >= view.width - TOLERANCE_PX &&
                     visible.height() >= view.height - TOLERANCE_PX
             )
+            val minimumPx = (48f * activity.resources.displayMetrics.density)
+                .toInt()
+            assertTrue(
+                "Action target is smaller than 48 dp: $value " +
+                    "${view.width}x${view.height}<$minimumPx",
+                view.width >= minimumPx && view.height >= minimumPx
+            )
+            assertTrue("Action is not focusable: $value", view.isFocusable)
+            val node: AccessibilityNodeInfo =
+                view.createAccessibilityNodeInfo()
+            assertTrue("Action exposes no click action: $value", node.isClickable)
         }
     }
 

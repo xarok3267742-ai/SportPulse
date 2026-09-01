@@ -70,7 +70,7 @@ val sportsScheduleProxyUrl = configuredValue(
             "SPORTS_SCHEDULE_PROXY_URL must be a public HTTPS endpoint without credentials or fragments"
         }
         require(
-            host != "api-football-v1.p.rapidapi.com" &&
+            !host.endsWith(".rapidapi.com") &&
                 host != "api-sports.io" &&
                 !host.endsWith(".api-sports.io")
         ) {
@@ -88,8 +88,8 @@ android {
         minSdk = 26
         targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 75
-        versionName = "3.3.0"
+        versionCode = 76
+        versionName = "3.4.0"
         buildConfigField(
             "String",
             "SPORTS_SCHEDULE_PROXY_URL",

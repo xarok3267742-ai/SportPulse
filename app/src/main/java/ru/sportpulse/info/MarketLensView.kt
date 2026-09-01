@@ -48,7 +48,9 @@ internal class MarketLensView @JvmOverloads constructor(
         ((MarketKind) -> Unit)? = null
 
     init {
-        applyAccessibleAction(dp(48f).toInt())
+        isClickable = false
+        isFocusable = true
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
     }
 
     fun setOnMarketSelectedListener(

@@ -27,6 +27,11 @@ class SportsScheduleSecurityTest {
         )
         assertFalse(
             SportsScheduleProxyPolicy.isConfigured(
+                "https://football-data.p.rapidapi.com/fixtures"
+            )
+        )
+        assertFalse(
+            SportsScheduleProxyPolicy.isConfigured(
                 "https://user:secret@schedule.example.ru/fixtures"
             )
         )

@@ -352,7 +352,7 @@ internal object SportsScheduleProxyPolicy {
         require(host.isNotBlank())
         require(uri.userInfo == null)
         require(uri.fragment == null)
-        require(host != "api-football-v1.p.rapidapi.com")
+        require(!host.endsWith(".rapidapi.com"))
         require(host != "api-sports.io" && !host.endsWith(".api-sports.io"))
     }
 }

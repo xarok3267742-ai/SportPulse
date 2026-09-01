@@ -1,6 +1,7 @@
 package ru.sportpulse.info
 
 import android.content.Context
+import android.graphics.drawable.RippleDrawable
 import android.view.View
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityNodeInfo
@@ -60,7 +61,11 @@ class InteractionAccessibilityInstrumentationTest {
         assertInteractiveControls("Штаб")
         assertSelected("Штаб: Решение")
 
-        listOf("Чек-листы", "Гид", "18+").forEach { tab ->
+        clickTab("Чек-листы")
+        assertInteractiveControls("Чек-листы")
+        assertMarketLensSummaryIsStatic()
+
+        listOf("Гид", "18+").forEach { tab ->
             clickTab(tab)
             assertInteractiveControls(tab)
         }
@@ -137,6 +142,12 @@ class InteractionAccessibilityInstrumentationTest {
                         "expected=${Button::class.java.name}"
                 )
             }
+            if (
+                (customTextAction || customLayoutAction) &&
+                view.background !is RippleDrawable
+            ) {
+                yield("${viewLabel(view)} exposes no ripple feedback")
+            }
         }
     }
 
@@ -163,6 +174,19 @@ class InteractionAccessibilityInstrumentationTest {
                 "$contentDescription is not selected",
                 view.createAccessibilityNodeInfo().isSelected
             )
+        }
+    }
+
+    private fun assertMarketLensSummaryIsStatic() {
+        scenario.onActivity { activity ->
+            val chart = descendants(activity.window.decorView)
+                .filterIsInstance<MarketLensView>()
+                .first()
+            val description = chart.contentDescription?.toString().orEmpty()
+            assertTrue("Market chart must expose its summary", description.isNotBlank())
+            assertTrue("Market chart must expose the current choice", "текущий выбор" in description)
+            assertTrue("Market chart must not duplicate selector click actions", !chart.isClickable)
+            assertTrue("Market chart summary must stay focusable", chart.isFocusable)
         }
     }
 

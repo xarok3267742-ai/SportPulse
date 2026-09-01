@@ -1119,7 +1119,7 @@ class MainActivity : Activity() {
                     AppColors.fieldMuted
                 }
             )
-            tab.background = rounded(
+            tab.background = rippleRounded(
                 if (selected) AppColors.fieldRaised else AppColors.field,
                 4
             )
@@ -6857,7 +6857,10 @@ class MainActivity : Activity() {
             Typeface.BOLD
         ).apply {
             gravity = Gravity.CENTER
-            background = rounded(Color.argb(185, 14, 20, 24), 24)
+            background = rippleRounded(
+                Color.argb(185, 14, 20, 24),
+                24
+            )
             applyAccessibleAction(dp(48))
             contentDescription = if (initiallySaved) {
                 "Убрать событие из сохраненных"
@@ -24210,8 +24213,13 @@ class MainActivity : Activity() {
     ): RippleDrawable {
         val content = rounded(color, radiusDp, strokeColor, strokeWidthDp)
         val mask = rounded(Color.WHITE, radiusDp)
+        val rippleColor = if (Color.luminance(color) >= 0.5f) {
+            Color.argb(28, 20, 24, 27)
+        } else {
+            Color.argb(38, 255, 255, 255)
+        }
         return RippleDrawable(
-            ColorStateList.valueOf(Color.argb(38, 255, 255, 255)),
+            ColorStateList.valueOf(rippleColor),
             content,
             mask
         )

@@ -14,7 +14,7 @@ internal object AppColors {
     val signalSoft: Int = Color.rgb(228, 239, 247)
     val danger: Int = Color.rgb(196, 45, 61)
     val dangerSoft: Int = Color.rgb(251, 232, 234)
-    val warning: Int = Color.rgb(172, 102, 0)
+    val warning: Int = Color.rgb(150, 84, 0)
     val warningSoft: Int = Color.rgb(251, 240, 218)
     val line: Int = Color.rgb(216, 222, 216)
     val field: Int = Color.rgb(11, 27, 30)
