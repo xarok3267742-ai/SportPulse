@@ -3,7 +3,6 @@ import java.net.URI
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
 }
 
 val localProperties = Properties().apply {
@@ -82,15 +81,15 @@ val sportsScheduleProxyUrl = configuredValue(
 
 android {
     namespace = "ru.sportpulse.info"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "ru.sportpulse.info"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 73
-        versionName = "3.1.0"
+        versionCode = 74
+        versionName = "3.2.0"
         buildConfigField(
             "String",
             "SPORTS_SCHEDULE_PROXY_URL",
@@ -103,12 +102,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         buildConfig = true
+    }
+
+    lint {
+        // Upgrade the wrapper together with AGP; 9.3.1 is its documented pairing.
+        disable += "AndroidGradlePluginVersion"
     }
 
     signingConfigs {
@@ -134,7 +134,7 @@ android {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20260719")
+    testImplementation("org.json:json:20260814")
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")

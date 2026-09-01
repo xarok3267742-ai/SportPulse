@@ -343,6 +343,35 @@ class TextLayoutInstrumentationTest {
         }
     }
 
+    @Test
+    fun adaptiveOptionGroupsKeepEveryChildInsideTheirWidth() {
+        assertAdaptiveGroupContained(
+            AdaptiveGroupTags.SPORT_FILTERS,
+            expectedChildren = 2
+        )
+        assertAdaptiveGroupContained(
+            AdaptiveGroupTags.TIME_FILTERS,
+            expectedChildren = 2
+        )
+        clickText("Инструменты")
+        assertAdaptiveGroupContained(
+            AdaptiveGroupTags.EVENT_TAGS,
+            expectedChildren = 1
+        )
+
+        clickTab("Штаб")
+        assertAdaptiveGroupContained(
+            AdaptiveGroupTags.DECISION_MARKETS,
+            expectedChildren = MarketKind.entries.size
+        )
+
+        clickTab("Чек-листы")
+        assertAdaptiveGroupContained(
+            AdaptiveGroupTags.MARKET_TEMPLATES,
+            expectedChildren = MarketKind.entries.size
+        )
+    }
+
     private fun clickTab(title: String) {
         scenario.onActivity { activity ->
             findTextView(activity, title) {
@@ -412,6 +441,49 @@ class TextLayoutInstrumentationTest {
                 scrollBounds.bottom <=
                     tabBounds.minOf { it.top } + TOLERANCE_PX
             )
+        }
+    }
+
+    private fun assertAdaptiveGroupContained(
+        groupTag: String,
+        expectedChildren: Int
+    ) {
+        scenario.onActivity { activity ->
+            val group = windowRoots(activity)
+                .flatMap(::descendants)
+                .filterIsInstance<AdaptiveWrapLayout>()
+                .firstOrNull {
+                    it.tag == groupTag
+                }
+                ?: error("Adaptive group not found: $groupTag")
+            assertTrue(
+                "$groupTag: expected at least $expectedChildren children, " +
+                    "actual ${group.childCount}",
+                group.childCount >= expectedChildren
+            )
+            repeat(group.childCount) { index ->
+                val child = group.getChildAt(index)
+                assertTrue(
+                    "$groupTag: child $index has no measured size",
+                    child.width > 0 && child.height > 0
+                )
+                assertTrue(
+                    "$groupTag: child $index crosses the left edge",
+                    child.left >= group.paddingLeft - TOLERANCE_PX
+                )
+                assertTrue(
+                    "$groupTag: child $index crosses the right edge " +
+                        "(${child.right}>${group.width - group.paddingRight})",
+                    child.right <= group.width -
+                        group.paddingRight + TOLERANCE_PX
+                )
+                assertTrue(
+                    "$groupTag: child $index crosses the bottom edge " +
+                        "(${child.bottom}>${group.height - group.paddingBottom})",
+                    child.bottom <= group.height -
+                        group.paddingBottom + TOLERANCE_PX
+                )
+            }
         }
     }
 

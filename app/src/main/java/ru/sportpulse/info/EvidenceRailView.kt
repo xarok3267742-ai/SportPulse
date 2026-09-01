@@ -9,6 +9,7 @@ import android.view.View
 
 internal class EvidenceRailView(context: Context) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val nextMarkerPath = Path()
     private val summaries = mutableListOf<PlainAnalyticsFactorSummary>()
 
     init {
@@ -64,13 +65,14 @@ internal class EvidenceRailView(context: Context) : View(context) {
                 paint.color = AppColors.fieldSignal
                 canvas.drawCircle(x, railY, radius + 7f * density, paint)
                 paint.style = Paint.Style.FILL
-                val marker = Path().apply {
+                nextMarkerPath.apply {
+                    reset()
                     moveTo(x, 8f * density)
                     lineTo(x - 6f * density, 18f * density)
                     lineTo(x + 6f * density, 18f * density)
                     close()
                 }
-                canvas.drawPath(marker, paint)
+                canvas.drawPath(nextMarkerPath, paint)
             }
 
             paint.style = Paint.Style.FILL

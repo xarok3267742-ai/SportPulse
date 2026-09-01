@@ -15,6 +15,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.text.Spannable
+import android.text.SpannableString
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -38,6 +40,8 @@ import android.widget.TextView
 import android.widget.Toast
 import android.text.InputFilter
 import android.text.InputType
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
@@ -3541,16 +3545,12 @@ class MainActivity : Activity() {
             CollectionXrayTimelapseHorizon,
             TextView
             >()
-        val horizonScroller = HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            clipToPadding = false
-        }
-        val horizonRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+        val horizonRow = AdaptiveWrapLayout(this).apply {
+            tag = AdaptiveGroupTags.TIMELAPSE_HORIZONS
+            lineSpacingPx = dp(6)
             setPadding(0, dp(2), 0, dp(2))
         }
-        horizonScroller.addView(horizonRow)
-        body.addView(horizonScroller, matchWrap(top = 12))
+        body.addView(horizonRow, matchWrap(top = 12))
 
         val frameHost = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -3792,7 +3792,10 @@ class MainActivity : Activity() {
                     "Срез ${collectionXrayTimelapseHorizonTitle(horizon)}"
             }
             horizonButtons[horizon] = button
-            horizonRow.addView(button, wrapWrap(right = 6))
+            horizonRow.addView(
+                button,
+                wrapWrap(right = 6)
+            )
         }
         refreshHorizonButtons()
         renderFrame()
@@ -6387,39 +6390,66 @@ class MainActivity : Activity() {
         return parts.joinToString("\n")
     }
 
-    private fun filterBar(): HorizontalScrollView {
-        val scroller = HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            clipToPadding = false
-        }
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val filters = listOf("Все", "Футбол", "Хоккей", "Баскетбол", "Киберспорт", "Другие")
-        filters.forEach { filter ->
-            row.addView(
-                filterChip(
-                    title = filter,
-                    selected = !savedOnly && activeSportFilter == filter
-                ) {
-                    activeSportFilter = filter
-                    savedOnly = false
-                    focusEventLimit = FOCUS_EVENT_PAGE_SIZE
-                    renderContent()
-                },
-                wrapWrap(right = 7)
-            )
-        }
-        row.addView(
-            filterChip(
-                title = "★ Сохраненные",
-                selected = savedOnly
-            ) {
-                savedOnly = !savedOnly
-                focusEventLimit = FOCUS_EVENT_PAGE_SIZE
-                renderContent()
-            }
+    private fun filterBar(): AdaptiveWrapLayout {
+        val filterState = SportFilterPolicy.evaluate(
+            catalogSports = catalogEvents.map(SportEvent::sport),
+            catalogEventIds = catalogEvents.mapTo(linkedSetOf()) {
+                it.id
+            },
+            bookmarkedIds = state.bookmarkedIds(),
+            selectedFilter = activeSportFilter,
+            savedOnly = savedOnly
         )
-        scroller.addView(row)
-        return scroller
+        val filters = filterState.filters
+        activeSportFilter = filterState.selectedFilter
+        savedOnly = filterState.savedOnly
+        return AdaptiveWrapLayout(this).apply {
+            tag = AdaptiveGroupTags.SPORT_FILTERS
+            lineSpacingPx = dp(7)
+            filters.forEach { filter ->
+                val selected =
+                    !savedOnly && activeSportFilter == filter
+                addView(
+                    filterChip(
+                        title = filter,
+                        selected = selected
+                    ) {
+                        activeSportFilter = filter
+                        savedOnly = false
+                        focusEventLimit = FOCUS_EVENT_PAGE_SIZE
+                        renderContent()
+                    }.apply {
+                        isSelected = selected
+                        contentDescription = if (selected) {
+                            "Вид спорта $filter, выбрано"
+                        } else {
+                            "Фильтр по виду спорта $filter"
+                        }
+                    },
+                    wrapWrap(right = 7)
+                )
+            }
+            if (filterState.showSavedFilter) {
+                addView(
+                    filterChip(
+                        title = "★ Сохраненные",
+                        selected = savedOnly
+                    ) {
+                        savedOnly = !savedOnly
+                        focusEventLimit = FOCUS_EVENT_PAGE_SIZE
+                        renderContent()
+                    }.apply {
+                        isSelected = savedOnly
+                        contentDescription = if (savedOnly) {
+                            "Только сохраненные события, выбрано"
+                        } else {
+                            "Показать только сохраненные события"
+                        }
+                    },
+                    wrapWrap()
+                )
+            }
+        }
     }
 
     private fun eventSearchPanel(): LinearLayout {
@@ -6589,30 +6619,27 @@ class MainActivity : Activity() {
                 )
             )
             addView(
-                HorizontalScrollView(this@MainActivity).apply {
-                    isHorizontalScrollBarEnabled = false
-                    clipToPadding = false
-                    addView(
-                        LinearLayout(this@MainActivity).apply {
-                            orientation = LinearLayout.HORIZONTAL
-                            filters.forEach { filter ->
-                                addView(
-                                    filterChip(
-                                        title = "${filter.title} ${summary.count(filter)}",
-                                        selected = filter == activeFeedTimeFilter
-                                    ) {
-                                        activeFeedTimeFilter = filter
-                                        focusEventLimit = FOCUS_EVENT_PAGE_SIZE
-                                        rerenderContentPreservingScroll()
-                                    }.apply {
-                                        contentDescription =
-                                            "Период ${filter.title.lowercase(Locale.getDefault())}: ${eventCountText(summary.count(filter))}"
-                                    },
-                                    wrapWrap(right = 7)
-                                )
-                            }
-                        }
-                    )
+                AdaptiveWrapLayout(this@MainActivity).apply {
+                    tag = AdaptiveGroupTags.TIME_FILTERS
+                    lineSpacingPx = dp(7)
+                    filters.forEach { filter ->
+                        val selected = filter == activeFeedTimeFilter
+                        addView(
+                            filterChip(
+                                title = "${filter.title} ${summary.count(filter)}",
+                                selected = selected
+                            ) {
+                                activeFeedTimeFilter = filter
+                                focusEventLimit = FOCUS_EVENT_PAGE_SIZE
+                                rerenderContentPreservingScroll()
+                            }.apply {
+                                isSelected = selected
+                                contentDescription =
+                                    "Период ${filter.title.lowercase(Locale.getDefault())}: ${eventCountText(summary.count(filter))}"
+                            },
+                            wrapWrap(right = 7)
+                        )
+                    }
                 },
                 matchWrap(top = 7)
             )
@@ -6709,7 +6736,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             minHeight = dp(40)
             setPadding(dp(14), 0, dp(14), 0)
-            background = rounded(
+            background = rippleRounded(
                 if (selected) AppColors.signal else AppColors.surface,
                 20,
                 if (selected) AppColors.signal else AppColors.line,
@@ -6904,19 +6931,21 @@ class MainActivity : Activity() {
         return card
     }
 
-    private fun tagRow(tags: List<String>): HorizontalScrollView {
-        val scroller = HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
+    private fun tagRow(tags: List<String>): AdaptiveWrapLayout {
+        return AdaptiveWrapLayout(this).apply {
+            tag = AdaptiveGroupTags.EVENT_TAGS
+            lineSpacingPx = dp(6)
+            tags.forEach { tag ->
+                addView(
+                    label(
+                        tag,
+                        AppColors.accentSoft,
+                        AppColors.accentDark
+                    ),
+                    wrapWrap(right = 6)
+                )
+            }
         }
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        tags.forEach { tag ->
-            row.addView(
-                label(tag, AppColors.accentSoft, AppColors.accentDark),
-                wrapWrap(right = 6)
-            )
-        }
-        scroller.addView(row)
-        return scroller
     }
 
     private fun feedWorkspaceSwitcher(): LinearLayout {
@@ -7071,68 +7100,124 @@ class MainActivity : Activity() {
         val tone = verificationCommandPriorityTone(
             task.priority
         )
-        return card().apply {
+        return card(padding = 0).apply {
+            clipToOutline = true
             addView(
-                label(
-                    "${task.priority.shortTitle} • 1 ИЗ ${dispatch.entries.size}",
-                    tone.background,
-                    tone.foreground
-                )
+                feedFocusLaneHeader(),
+                matchFixed(imageHeaderHeight(104))
             )
             addView(
-                text(
-                    "С чего начать",
-                    20f,
-                    AppColors.ink,
-                    Typeface.BOLD
-                ),
-                matchWrap(top = 9)
-            )
-            addView(
-                text(
-                    task.title,
-                    17f,
-                    AppColors.ink,
-                    Typeface.BOLD
-                ),
-                matchWrap(top = 5)
-            )
-            addView(
-                text(
-                    "${event.match}. ${task.reason}",
-                    13.5f,
-                    AppColors.muted
-                ),
-                matchWrap(top = 5)
-            )
-            addView(
-                text(
-                    feedFocusDeadline(task, now),
-                    12f,
-                    tone.foreground,
-                    Typeface.BOLD
-                ),
-                matchWrap(top = 7)
-            )
-            addView(
-                commandButton(
-                    "Открыть короткий разбор",
-                    AppColors.accent
-                ) {
-                    openPulseStory(event.id)
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(16), dp(14), dp(16), dp(16))
+                    addView(
+                        label(
+                            "${task.priority.shortTitle} • 1 ИЗ ${dispatch.entries.size}",
+                            tone.background,
+                            tone.foreground
+                        )
+                    )
+                    addView(
+                        text(
+                            task.title,
+                            17f,
+                            AppColors.ink,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 9)
+                    )
+                    addView(
+                        text(
+                            "${event.match}. ${task.reason}",
+                            13.5f,
+                            AppColors.muted
+                        ),
+                        matchWrap(top = 5)
+                    )
+                    addView(
+                        text(
+                            feedFocusDeadline(task, now),
+                            12f,
+                            tone.foreground,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 7)
+                    )
+                    addView(
+                        commandButton(
+                            "Открыть короткий разбор",
+                            AppColors.accent
+                        ) {
+                            openPulseStory(event.id)
+                        },
+                        matchWrap(top = 13)
+                    )
+                    addView(
+                        text(
+                            feedFocusReason(task.priority) +
+                                " • выбрано ${dispatch.entries.size} из $totalEventCount" +
+                                " • метка ${dispatch.shortFingerprint}",
+                            10.5f,
+                            AppColors.muted,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 9)
+                    )
                 },
-                matchWrap(top = 13)
+                matchWrap()
+            )
+        }
+    }
+
+    private fun feedFocusLaneHeader(): FrameLayout {
+        return imageFrame().apply {
+            addView(
+                ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.feed_focus_lane)
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    contentDescription =
+                        "Операторская линия ведёт к одному следующему моменту проверки"
+                },
+                frameMatch()
             )
             addView(
-                text(
-                    feedFocusReason(task.priority) +
-                        " • выбрано ${dispatch.entries.size} из $totalEventCount" +
-                        " • метка ${dispatch.shortFingerprint}",
-                    10.5f,
-                    AppColors.muted,
-                    Typeface.BOLD
-                ),
-                matchWrap(top = 9)
+                View(this@MainActivity).apply {
+                    background = gradientScrim(compact = true)
+                    importantForAccessibility =
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                },
+                frameMatch()
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(
+                        text(
+                            "ОДИН СЛЕДУЮЩИЙ ХОД",
+                            10.5f,
+                            Color.rgb(187, 239, 228),
+                            Typeface.BOLD
+                        )
+                    )
+                    addView(
+                        text(
+                            "С чего начать",
+                            20f,
+                            Color.WHITE,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 2)
+                    )
+                },
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM
+                ).apply {
+                    leftMargin = dp(14)
+                    rightMargin = dp(14)
+                    bottomMargin = dp(11)
+                }
             )
         }
     }
@@ -7591,11 +7676,9 @@ class MainActivity : Activity() {
             row.addView(explanation, matchWrap(top = 6))
         }
         row.addView(
-            text(
-                displayedTime,
-                12.5f,
-                AppColors.accentDark,
-                Typeface.BOLD
+            matchCenterMetadata(
+                displayedTime = displayedTime,
+                event = event
             ),
             matchWrap(top = 4)
         )
@@ -7605,14 +7688,6 @@ class MainActivity : Activity() {
         )?.let { explanation ->
             row.addView(explanation, matchWrap(top = 7))
         }
-        row.addView(
-            text(
-                "${event.tournament} • ${event.region}",
-                11.5f,
-                AppColors.muted
-            ),
-            matchWrap(top = 3)
-        )
         leadTask?.let { task ->
             row.addView(
                 text(
@@ -7634,6 +7709,34 @@ class MainActivity : Activity() {
             matchWrap(top = 7)
         )
         return row
+    }
+
+    private fun matchCenterMetadata(
+        displayedTime: String,
+        event: SportEvent
+    ): TextView {
+        val value = "$displayedTime • ${event.tournament} • ${event.region}"
+        val styled = SpannableString(value).apply {
+            setSpan(
+                ForegroundColorSpan(AppColors.accentDark),
+                0,
+                displayedTime.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            setSpan(
+                StyleSpan(Typeface.BOLD),
+                0,
+                displayedTime.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+        return text(
+            value,
+            12f,
+            AppColors.muted
+        ).apply {
+            text = styled
+        }
     }
 
     private fun feedGettingStartedPanel(): LinearLayout {
@@ -10981,7 +11084,6 @@ class MainActivity : Activity() {
         lateinit var thesisInput: EditText
         lateinit var counterargumentInput: EditText
         lateinit var stopConditionInput: EditText
-        lateinit var marketScroller: HorizontalScrollView
 
         panel.addView(
             text(
@@ -11062,81 +11164,83 @@ class MainActivity : Activity() {
             ),
             matchWrap(top = 18)
         )
-        marketScroller = HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            clipToPadding = false
-            addView(
-                LinearLayout(this@MainActivity).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    lens.items.forEach { item ->
-                        val kind = item.guide.kind
-                        val selected = kind == draft.marketKind
-                        val applicable = item.status !=
-                            MarketLensStatus.NOT_APPLICABLE
-                        addView(
-                            text(
-                                kind.shortTitle,
-                                13f,
+        panel.addView(
+            AdaptiveWrapLayout(this).apply {
+                tag = AdaptiveGroupTags.DECISION_MARKETS
+                lineSpacingPx = dp(7)
+                lens.items.forEach { item ->
+                    val kind = item.guide.kind
+                    val selected = kind == draft.marketKind
+                    val applicable = item.status !=
+                        MarketLensStatus.NOT_APPLICABLE
+                    addView(
+                        text(
+                            kind.shortTitle,
+                            13f,
+                            if (selected) {
+                                Color.WHITE
+                            } else if (applicable) {
+                                AppColors.signal
+                            } else {
+                                AppColors.muted
+                            },
+                            Typeface.BOLD
+                        ).apply {
+                            gravity = Gravity.CENTER
+                            minWidth = dp(64)
+                            minHeight = dp(42)
+                            setPadding(dp(12), 0, dp(12), 0)
+                            background = rippleRounded(
                                 if (selected) {
-                                    Color.WHITE
-                                } else if (applicable) {
                                     AppColors.signal
                                 } else {
-                                    AppColors.muted
+                                    AppColors.surface
                                 },
-                                Typeface.BOLD
-                            ).apply {
-                                gravity = Gravity.CENTER
-                                minWidth = dp(64)
-                                minHeight = dp(42)
-                                setPadding(dp(12), 0, dp(12), 0)
-                                background = rippleRounded(
-                                    if (selected) {
-                                        AppColors.signal
-                                    } else {
-                                        AppColors.surface
-                                    },
-                                    8,
-                                    if (selected) {
-                                        AppColors.signal
-                                    } else {
-                                        AppColors.line
-                                    },
-                                    1
-                                )
-                                isEnabled = applicable
-                                alpha = if (applicable) 1f else 0.45f
-                                isClickable = applicable
-                                isFocusable = applicable
-                                contentDescription = if (applicable) {
-                                    "Тип проверки ${kind.shortTitle}"
+                                8,
+                                if (selected) {
+                                    AppColors.signal
                                 } else {
-                                    "${kind.shortTitle}: не подходит событию"
+                                    AppColors.line
+                                },
+                                1
+                            )
+                            isEnabled = applicable
+                            alpha = if (applicable) 1f else 0.45f
+                            isClickable = applicable
+                            isFocusable = applicable
+                            isSelected = selected
+                            contentDescription = if (applicable) {
+                                if (selected) {
+                                    "Тип проверки ${kind.shortTitle}, выбрано"
+                                } else {
+                                    "Тип проверки ${kind.shortTitle}"
                                 }
-                                setOnClickListener {
-                                    val updated =
-                                        decisionDeskDraftFromInputs(
-                                            event = event,
-                                            marketKind = kind,
-                                            thesisInput = thesisInput,
-                                            counterargumentInput =
-                                                counterargumentInput,
-                                            stopConditionInput =
-                                                stopConditionInput
-                                        )
-                                    state.saveDecisionDeskDraft(updated)
-                                    activeMarketLensKind = kind
-                                    state.selectedMarketKind = kind
-                                    rerenderContentPreservingScroll()
-                                }
-                            },
-                            wrapWrap(right = 7)
-                        )
-                    }
+                            } else {
+                                "${kind.shortTitle}: не подходит событию"
+                            }
+                            setOnClickListener {
+                                val updated =
+                                    decisionDeskDraftFromInputs(
+                                        event = event,
+                                        marketKind = kind,
+                                        thesisInput = thesisInput,
+                                        counterargumentInput =
+                                            counterargumentInput,
+                                        stopConditionInput =
+                                            stopConditionInput
+                                    )
+                                state.saveDecisionDeskDraft(updated)
+                                activeMarketLensKind = kind
+                                state.selectedMarketKind = kind
+                                rerenderContentPreservingScroll()
+                            }
+                        },
+                        wrapWrap(right = 7)
+                    )
                 }
-            )
-        }
-        panel.addView(marketScroller, matchWrap(top = 7))
+            },
+            matchWrap(top = 7)
+        )
 
         thesisInput = decisionDeskInput(
             value = draft.thesis,
@@ -12070,10 +12174,7 @@ class MainActivity : Activity() {
             val manager = getSystemService(
                 INPUT_METHOD_SERVICE
             ) as InputMethodManager
-            manager.showSoftInput(
-                input,
-                InputMethodManager.SHOW_IMPLICIT
-            )
+            manager.showSoftInput(input, 0)
         }
     }
 
@@ -20707,8 +20808,9 @@ class MainActivity : Activity() {
         )
         val selectors =
             linkedMapOf<MarketKind, TextView>()
-        val selectorRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+        val selectorRow = AdaptiveWrapLayout(this).apply {
+            tag = AdaptiveGroupTags.MARKET_TEMPLATES
+            lineSpacingPx = dp(6)
             lens.items.forEachIndexed { index, item ->
                 val selector = text(
                     item.guide.kind.shortTitle,
@@ -20747,12 +20849,7 @@ class MainActivity : Activity() {
             }
         }
         panel.addView(
-            HorizontalScrollView(this).apply {
-                isHorizontalScrollBarEnabled = false
-                overScrollMode =
-                    View.OVER_SCROLL_IF_CONTENT_SCROLLS
-                addView(selectorRow)
-            },
+            selectorRow,
             matchWrap(top = 5)
         )
         panel.addView(
@@ -20871,6 +20968,11 @@ class MainActivity : Activity() {
                     1
                 )
                 view.isSelected = selected
+                view.contentDescription = if (selected) {
+                    "${item.guide.title}, выбрано"
+                } else {
+                    "Выбрать ${item.guide.title}"
+                }
             }
             val tone = marketLensTone(
                 selectedItem.status
