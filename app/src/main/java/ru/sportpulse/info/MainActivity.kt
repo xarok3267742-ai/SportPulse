@@ -131,6 +131,15 @@ class MainActivity : Activity() {
         "18+"
     )
 
+    private data class ProductTourStep(
+        val stage: String,
+        val title: String,
+        val action: String,
+        val result: String,
+        val guardrail: String,
+        val nextAction: String
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         state = UserStateStore(this)
@@ -22655,39 +22664,58 @@ class MainActivity : Activity() {
 
     private fun showProductTour(stepIndex: Int = 0) {
         val steps = listOf(
-            Triple(
-                "1. Выберите событие",
-                "Откройте «Матчи». Матч-центр сразу покажет ближайшие события, время, турнир и первую проверку.",
-                "Время и статус берутся из расписания. Перед решением всё равно сверьте их с официальным источником."
+            ProductTourStep(
+                stage = "СОБЫТИЕ",
+                title = "Выберите матч",
+                action = "Откройте «Матчи» и выберите событие по времени и турниру.",
+                result = "Первая незакрытая проверка.",
+                guardrail = "Расписание — отправная точка. Перед решением сверьте официальный источник.",
+                nextAction = "Далее: табло"
             ),
-            Triple(
-                "2. Прочитайте табло",
-                "В «Штабе» сначала видны статус, готовность замысла, причина и одна команда. Под табло выберите короткий итог или полный аудит.",
-                "Переключатель меняет только глубину представления. Статус и синяя команда описывают проверку, а не совет сделать ставку."
+            ProductTourStep(
+                stage = "ТАБЛО",
+                title = "Сначала прочитайте статус",
+                action = "В «Штабе» найдите причину статуса и одну синюю команду.",
+                result = "Короткий итог или полный аудит.",
+                guardrail = "Статус описывает готовность проверки, а не вероятность исхода.",
+                nextAction = "Далее: сценарий"
             ),
-            Triple(
-                "3. Откройте рабочую форму",
-                "Раскройте форму только для редактирования: постройте сценарии A и B и проведите наблюдаемую стоп-линию.",
-                "Незаполненная развилка получает статус «Стоп». Приложение не выбирает удобный сценарий за пользователя."
+            ProductTourStep(
+                stage = "СЦЕНАРИЙ",
+                title = "Разведите варианты A и B",
+                action = "Откройте рабочую форму, запишите два сценария и наблюдаемую стоп-линию.",
+                result = "Условие, при котором решение останавливается.",
+                guardrail = "Незаполненная развилка получает «Стоп»; приложение не выбирает удобный сценарий.",
+                nextAction = "Далее: факт"
             ),
-            Triple(
-                "4. Закройте один пробел",
-                "Сначала запишите один проверяемый факт и первичный источник. Затем сохраните уровень «1 источник» или отдельно включите второй источник и укажите их фактическую связь.",
-                "Одинаковое происхождение не создаст кворум. Расхождение останется стоп-сигналом, а полнота проверки не означает вероятность исхода."
+            ProductTourStep(
+                stage = "ИСТОЧНИК",
+                title = "Закройте один пробел",
+                action = "Запишите один проверяемый факт и его первичный источник. Второй добавляйте только для независимой сверки.",
+                result = "Квитанция происхождения факта.",
+                guardrail = "Общее происхождение не создаёт кворум; расхождение остаётся стоп-сигналом.",
+                nextAction = "Далее: решение"
             ),
-            Triple(
-                "5. Проверьте и зафиксируйте",
-                "Сначала выберите «Пропустить», «Наблюдать» или «Факты сверены». Прочитайте точный текст будущей записи и только затем нажмите отдельную команду фиксации.",
-                "До отдельной команды выбор не попадает в журнал. Это контроль качества проверки, а не расчёт вероятности, ожидаемой выгоды или размера ставки."
+            ProductTourStep(
+                stage = "РЕШЕНИЕ",
+                title = "Сначала выберите, потом запишите",
+                action = "Выберите итог, прочитайте будущую запись и только затем подтвердите фиксацию.",
+                result = "Решение, связанное с проверенными фактами.",
+                guardrail = "Это контроль качества анализа, а не расчёт вероятности, выгоды или размера ставки.",
+                nextAction = "Начать с Матчей"
             )
         )
         val index = stepIndex.coerceIn(steps.indices)
         val step = steps[index]
-        state.hasSeenProductTour = true
+        val imageHeight = when {
+            effectiveFontScale() >= 1.8f -> 72
+            effectiveFontScale() >= 1.3f -> 84
+            else -> 104
+        }
 
         val contentPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(20), dp(22), dp(12))
+            setPadding(dp(22), dp(18), dp(22), dp(12))
             addView(
                 label(
                     "ШАГ ${index + 1} ИЗ ${steps.size}",
@@ -22696,21 +22724,83 @@ class MainActivity : Activity() {
                 )
             )
             addView(
-                text(step.first, 23f, AppColors.ink, Typeface.BOLD),
+                productTourProgress(index, steps.size),
+                matchFixed(6, top = 10)
+            )
+            addView(
+                imageFrame().apply {
+                    addView(
+                        ImageView(this@MainActivity).apply {
+                            setImageResource(R.drawable.product_tour_route_v3110)
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                            contentDescription =
+                                "Маршрут проверки: событие, табло, сценарий, источник и решение"
+                        },
+                        frameMatch()
+                    )
+                },
+                matchFixed(imageHeight, top = 12)
+            )
+            addView(
+                text(step.stage, 11f, AppColors.signal, Typeface.BOLD),
+                matchWrap(top = 14)
+            )
+            addView(
+                text(step.title, 22f, AppColors.ink, Typeface.BOLD),
+                matchWrap(top = 4)
+            )
+            addView(
+                text("СЕЙЧАС", 10.5f, AppColors.accentDark, Typeface.BOLD),
                 matchWrap(top = 12)
             )
-            addView(text(step.second, 15f, AppColors.ink), matchWrap(top = 9))
             addView(
-                text(
-                    step.third,
-                    13f,
-                    AppColors.accentDark,
-                    Typeface.BOLD
-                ).apply {
+                text(step.action, 15f, AppColors.ink),
+                matchWrap(top = 4)
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
                     background = rounded(AppColors.accentSoft, 8)
                     setPadding(dp(12), dp(10), dp(12), dp(10))
+                    addView(
+                        text(
+                            "РЕЗУЛЬТАТ ШАГА",
+                            10.5f,
+                            AppColors.accentDark,
+                            Typeface.BOLD
+                        )
+                    )
+                    addView(
+                        text(
+                            step.result,
+                            13.5f,
+                            AppColors.accentDark,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 3)
+                    )
                 },
                 matchWrap(top = 12)
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    background = rounded(AppColors.dangerSoft, 8)
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    addView(
+                        text(
+                            "ГРАНИЦА",
+                            10.5f,
+                            AppColors.danger,
+                            Typeface.BOLD
+                        )
+                    )
+                    addView(
+                        text(step.guardrail, 12.5f, AppColors.ink),
+                        matchWrap(top = 3)
+                    )
+                },
+                matchWrap(top = 8)
             )
         }
         lateinit var dialog: AlertDialog
@@ -22720,15 +22810,12 @@ class MainActivity : Activity() {
         }
         actions.addView(
             commandButton(
-                if (index == steps.lastIndex) {
-                    "Начать с Матчей"
-                } else {
-                    "Далее"
-                },
+                step.nextAction,
                 AppColors.accent
             ) {
                 dialog.dismiss()
                 if (index == steps.lastIndex) {
+                    state.hasSeenProductTour = true
                     selectTab(0)
                 } else {
                     showProductTour(index + 1)
@@ -22738,15 +22825,41 @@ class MainActivity : Activity() {
         )
         if (index > 0) {
             actions.addView(
-                outlineButton("Назад", AppColors.muted) {
-                    dialog.dismiss()
-                    showProductTour(index - 1)
+                LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    addView(
+                        outlineButton("Назад", AppColors.muted) {
+                            dialog.dismiss()
+                            showProductTour(index - 1)
+                        },
+                        LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1f
+                        ).apply {
+                            marginEnd = dp(4)
+                        }
+                    )
+                    addView(
+                        outlineButton("Закрыть", AppColors.muted) {
+                            state.hasSeenProductTour = true
+                            dialog.dismiss()
+                        },
+                        LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1f
+                        ).apply {
+                            marginStart = dp(4)
+                        }
+                    )
                 },
                 matchWrap(top = 8)
             )
         } else {
             actions.addView(
                 outlineButton("Закрыть", AppColors.muted) {
+                    state.hasSeenProductTour = true
                     dialog.dismiss()
                 },
                 matchWrap(top = 8)
@@ -22775,8 +22888,46 @@ class MainActivity : Activity() {
         dialog = AlertDialog.Builder(this)
             .setView(panel)
             .create()
+        dialog.setCancelable(false)
         dialog.setCanceledOnTouchOutside(false)
         dialog.show()
+    }
+
+    private fun productTourProgress(
+        activeIndex: Int,
+        total: Int
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            contentDescription =
+                "Маршрут обучения: шаг ${activeIndex + 1} из $total"
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            repeat(total) { position ->
+                addView(
+                    View(this@MainActivity).apply {
+                        background = rounded(
+                            when {
+                                position < activeIndex -> AppColors.accentDark
+                                position == activeIndex -> AppColors.signal
+                                else -> AppColors.line
+                            },
+                            3
+                        )
+                        importantForAccessibility =
+                            View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    },
+                    LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1f
+                    ).apply {
+                        marginStart = dp(2)
+                        marginEnd = dp(2)
+                    }
+                )
+            }
+        }
     }
 
     private fun tourDialogHeightDp(): Int {

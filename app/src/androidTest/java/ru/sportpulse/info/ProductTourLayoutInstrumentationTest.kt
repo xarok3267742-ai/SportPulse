@@ -12,6 +12,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -50,21 +51,40 @@ class ProductTourLayoutInstrumentationTest {
         assertCompletelyVisible("Выйти")
         clickText("Мне есть 18 лет")
 
+        val titles = listOf(
+            "Выберите матч",
+            "Сначала прочитайте статус",
+            "Разведите варианты A и B",
+            "Закройте один пробел",
+            "Сначала выберите, потом запишите"
+        )
+        val stages = listOf(
+            "СОБЫТИЕ",
+            "ТАБЛО",
+            "СЦЕНАРИЙ",
+            "ИСТОЧНИК",
+            "РЕШЕНИЕ"
+        )
+        val primaryActions = listOf(
+            "Далее: табло",
+            "Далее: сценарий",
+            "Далее: факт",
+            "Далее: решение",
+            "Начать с Матчей"
+        )
         repeat(5) { index ->
             val step = index + 1
             waitForText("ШАГ $step ИЗ 5")
             audit("Обучение / шаг $step", failures)
-            val action = if (step == 5) {
-                "Начать с Матчей"
-            } else {
-                "Далее"
-            }
+            assertTourHeader(step, stages[index], titles[index])
+            val action = primaryActions[index]
             assertCompletelyVisible(action)
-            assertCompletelyVisible(
-                if (step == 1) "Закрыть" else "Назад"
-            )
+            assertCompletelyVisible("Закрыть")
+            if (step > 1) assertCompletelyVisible("Назад")
+            if (step == 1) assertProductTourSeen(expected = false)
             clickText(action)
         }
+        waitForProductTourSeen()
 
         assertTrue(
             failures.joinToString(
@@ -73,6 +93,78 @@ class ProductTourLayoutInstrumentationTest {
             ),
             failures.isEmpty()
         )
+    }
+
+    private fun assertTourHeader(
+        step: Int,
+        stageText: String,
+        titleText: String
+    ) {
+        scenario.onActivity { activity ->
+            val roots = windowRoots(activity).toList()
+            val views = roots.asSequence()
+                .flatMap(::descendants)
+                .toList()
+            val label = views.filterIsInstance<TextView>()
+                .first { it.text.toString() == "ШАГ $step ИЗ 5" }
+            val progress = views.firstOrNull {
+                it.contentDescription?.toString() ==
+                    "Маршрут обучения: шаг $step из 5"
+            } ?: error("Product tour progress is missing for step $step")
+            val image = views.filterIsInstance<ImageView>()
+                .firstOrNull {
+                    it.contentDescription?.toString() ==
+                        TOUR_IMAGE_DESCRIPTION
+                }
+                ?: error("Product tour image is missing")
+            val stage = views.filterIsInstance<TextView>()
+                .first { it.text.toString() == stageText }
+            val title = views.filterIsInstance<TextView>()
+                .first { it.text.toString() == titleText }
+            val labelBounds = visibleBounds(label)
+            val progressBounds = visibleBounds(progress)
+            val imageBounds = visibleBounds(image)
+            val stageBounds = visibleBounds(stage)
+            val titleBounds = visibleBounds(title)
+            assertTrue(
+                "Tour label overlaps progress: $labelBounds and $progressBounds",
+                labelBounds.bottom <= progressBounds.top
+            )
+            assertTrue(
+                "Tour progress overlaps image: $progressBounds and $imageBounds",
+                progressBounds.bottom <= imageBounds.top
+            )
+            assertTrue(
+                "Tour image overlaps stage: $imageBounds and $stageBounds",
+                imageBounds.bottom <= stageBounds.top
+            )
+            assertTrue(
+                "Tour stage overlaps title: $stageBounds and $titleBounds",
+                stageBounds.bottom <= titleBounds.top
+            )
+        }
+    }
+
+    private fun assertProductTourSeen(expected: Boolean) {
+        val actual = instrumentation.targetContext
+            .getSharedPreferences("sport_pulse_state", Context.MODE_PRIVATE)
+            .getBoolean(PRODUCT_TOUR_SEEN_KEY, false)
+        if (expected) {
+            assertTrue("Product tour completion was not stored", actual)
+        } else {
+            assertFalse("Product tour was stored before an explicit exit", actual)
+        }
+    }
+
+    private fun waitForProductTourSeen() {
+        repeat(50) {
+            val seen = instrumentation.targetContext
+                .getSharedPreferences("sport_pulse_state", Context.MODE_PRIVATE)
+                .getBoolean(PRODUCT_TOUR_SEEN_KEY, false)
+            if (seen) return
+            Thread.sleep(20)
+        }
+        assertProductTourSeen(expected = true)
     }
 
     private fun waitForText(value: String) {
@@ -261,5 +353,8 @@ class ProductTourLayoutInstrumentationTest {
         const val TOLERANCE_PX = 2
         const val AGE_IMAGE_DESCRIPTION =
             "Порог 18+: закрытый доступ к инструментам проверки спортивных данных"
+        const val TOUR_IMAGE_DESCRIPTION =
+            "Маршрут проверки: событие, табло, сценарий, источник и решение"
+        const val PRODUCT_TOUR_SEEN_KEY = "product_tour_seen_v1"
     }
 }

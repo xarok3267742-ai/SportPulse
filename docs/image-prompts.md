@@ -753,3 +753,23 @@ Avoid: marketing hero, bouncer, ID card with fake text, padlock cliché, cyberpu
 ```
 
 Generated with the built-in image generation tool from the product's Decision gate and Matchday briefing material references, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/age_gate_v3100.jpg`. The centered closed barrier remains legible in the 96 dp standard header and its 72 dp large-text variant; all age wording remains native Android text.
+
+## Product tour route
+
+```text
+Use case: stylized-concept
+Asset type: compact panoramic image header inside a five-step onboarding dialog for an Android sports-analysis application
+Primary request: create one original, immediately readable physical route of evidence from selecting a sports event to recording a reviewed decision; the image should make the product workflow understandable before reading any copy
+Input images: Image 1 is a reference for the graphite sports newsroom, restrained stadium context, and tactile selector materials; Image 2 is a reference for a single continuous cyan evidence rail, optical inspection hardware, and premium top-down product photography; Image 3 is a reference for the serious closed-threshold language and controlled red accent. Use only their material and lighting language, do not copy their compositions.
+Scene/backdrop: top-down graphite operations bench at the edge of a real football and ice-hockey analysis room, with only subtle field and rink context at the far background
+Subject: exactly five distinct tactile stations arranged in one clean horizontal sequence from left to right and connected by exactly one continuous cyan data rail: first a blank event tile with a tiny field diagram, second a five-port evidence board, third one A/B fork mechanism with two paths visibly rejoining, fourth one clear source-verification capsule under an optical lens, fifth one compact sealed decision ledger with a calm deep-teal completion latch; include one small restrained red stop marker before the final station and one amber uncertainty light near the source station
+Style/medium: premium cinematic industrial product photography, realistic materials, quiet sports newsroom aesthetic, original hardware design
+Composition/framing: wide 16:9 landscape; all five stations fully visible, evenly spaced, and centered in one horizontal band; essential hardware inside the central 42 percent of image height and central 92 percent width so a center crop near 3:1 preserves the complete route; strong left-to-right visual rhythm; no empty dominant foreground
+Lighting/mood: controlled stadium spill, crisp local contrast, serious, deliberate, educational, non-promotional
+Color palette: charcoal graphite, off-white evidence paper, cyan, deep teal, one restrained safety red, one restrained amber; balanced neutrals, no purple, no orange dominance, no gradients, no neon bloom
+Materials/textures: matte anodized metal, optical glass, clear polycarbonate, fine paper fibers, subtle pitch and rink markings
+Constraints: exactly five stations, exactly one continuous cyan route, exactly one A/B fork that visibly rejoins, exactly one clear source capsule, exactly one sealed final ledger; no words, no letters, no numbers, no logos, no team branding, no scores, no odds, no percentages, no money, no betting slips, no casino objects, no people, no hands, no smartphone, no UI mockup, no watermark; the scene must communicate verification and sequence, never reward or prediction
+Avoid: marketing hero, sci-fi spaceship console, cyberpunk, excessive glow, duplicated stations, clutter, trophy, celebration, prize, open gate, blurred primary hardware, illegible fake text, isolated decorative objects
+```
+
+Generated with the built-in image generation tool from the Matchday briefing, Workspace depth and Age gate material references, optimized to a 1672 × 941 JPEG and saved as `app/src/main/res/drawable-nodpi/product_tour_route_v3110.jpg`. All five stations remain visible in the 104 dp standard header and its 72 dp large-text variant; stage names, progress and instructions remain native Android elements.
