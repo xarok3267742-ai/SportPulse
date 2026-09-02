@@ -879,7 +879,7 @@ class MainActivity : Activity() {
         val frame = imageFrame()
         frame.addView(
             ImageView(this).apply {
-                setImageResource(R.drawable.hero_sport_pulse)
+                setImageResource(R.drawable.matchday_briefing_v390)
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 contentDescription = null
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -897,27 +897,27 @@ class MainActivity : Activity() {
             )
         )
 
-        frame.addView(
-            label(
-                "ИНФОРМАЦИЯ • НЕ БК",
-                Color.argb(205, 20, 24, 27),
-                Color.WHITE,
-                Color.argb(80, 255, 255, 255)
-            ),
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP or Gravity.START
-            ).apply {
-                leftMargin = dp(16)
-                topMargin = dp(if (compactViewport) 10 else 16)
-            }
-        )
-
         val briefing = matchdayBriefing()
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(text("Матч-день", 20.5f, Color.WHITE, Typeface.BOLD))
+            addView(
+                label(
+                    "ИНФОРМАЦИЯ • НЕ БК",
+                    Color.argb(205, 20, 24, 27),
+                    Color.WHITE,
+                    Color.argb(80, 255, 255, 255)
+                ),
+                wrapWrap()
+            )
+            addView(
+                text(
+                    "Матч-день",
+                    20.5f,
+                    Color.WHITE,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 6)
+            )
             heroTimeline = text(
                 briefing.timelineText(),
                 12.5f,
@@ -946,7 +946,8 @@ class MainActivity : Activity() {
             ).apply {
                 leftMargin = dp(18)
                 rightMargin = dp(18)
-                bottomMargin = dp(if (compactViewport) 10 else 18)
+                topMargin = dp(if (compactViewport) 8 else 12)
+                bottomMargin = dp(if (compactViewport) 8 else 12)
             }
         )
         return frame
@@ -25423,7 +25424,7 @@ class MainActivity : Activity() {
                 configuration.screenWidthDp < 360 -> 220
             configuration.fontScale >= 1.3f -> 196
             configuration.screenHeightDp < 840 -> 96
-            else -> 112
+            else -> 132
         }
     }
 

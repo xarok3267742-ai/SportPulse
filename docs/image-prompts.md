@@ -713,3 +713,23 @@ Avoid: generic dashboard, neon cyberpunk, decorative gradients, excessive glow, 
 ```
 
 Generated with the built-in image generation tool from the existing Decision gate and Progressive fact receipt material references, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/workspace_depth_v380.jpg`. The whole-field window, layered inspection well and single continuous data rail stay readable in the 96 dp standard marker and its 72 dp large-text variant.
+
+## Matchday briefing
+
+```text
+Use case: stylized-concept
+Asset type: compact 16:9 image backdrop for the Match Center briefing header in an Android sports-analysis application
+Primary request: create an original, quiet matchday operations image that communicates sorting sports events into what is happening now, what is scheduled today, and what needs verification; it must feel like a serious editorial instrument, not a betting promotion
+Input images: Image 1 is only a reference for the broad multi-sport context and dark stadium atmosphere; Image 2 is the product's preferred reference for tactile graphite hardware, clear polycarbonate, paper texture and restrained cyan signaling. Do not copy either composition.
+Scene/backdrop: top-down view of a compact graphite matchday operations desk beside the edge of a real floodlit football pitch and a small portion of a hockey rink visible through a control-room window
+Subject: on the right half, exactly three slim parallel physical signal lanes feed one clear event tray; one lane has a calm teal active beacon, one has an off-white scheduled marker, and one has a restrained signal-red verification gate; a single continuous cyan rail links them without implying prediction or ranking
+Style/medium: premium cinematic product photography with realistic industrial materials, sports newsroom operations aesthetic, distinctive and calm
+Composition/framing: wide 16:9 landscape; reserve the entire left 48 percent and lower-left area as dark low-detail negative space for white UI copy; keep all meaningful hardware in the center-right horizontal band so a center crop to an approximately 2.85:1 mobile header remains legible; generous safe margins
+Lighting/mood: controlled stadium spill light, crisp local contrast on the hardware, dark but not crushed, trustworthy and work-focused
+Color palette: charcoal graphite, off-white, teal, cyan, one restrained red gate; balanced neutral palette without purple, orange dominance, gradients or neon glow
+Materials/textures: matte anodized metal, optical glass, clear polycarbonate, subtle paper fibers, real pitch and ice texture
+Constraints: exactly three signal lanes, exactly one event tray, no words, no letters, no numbers, no logos, no team branding, no scores, no odds, no money, no betting slips, no casino objects, no people, no hands, no smartphone, no UI mockup, no watermark; the lanes indicate time and verification state only, never chance or recommendation
+Avoid: athlete collage, generic dashboard, marketing hero, cyberpunk, decorative graphs, excessive glow, clutter, duplicate trays, trophies, celebratory imagery, blurred primary hardware
+```
+
+Generated with the built-in image generation tool from the prior multi-sport atmosphere and the product's graphite evidence hardware references, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/matchday_briefing_v390.jpg`. The dark left safe zone carries the briefing copy while three physical lanes remain legible in the compact center crop.

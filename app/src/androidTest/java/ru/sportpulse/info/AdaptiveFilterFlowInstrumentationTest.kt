@@ -96,6 +96,61 @@ class AdaptiveFilterFlowInstrumentationTest {
         }
     }
 
+    @Test
+    fun matchdayBriefingCopyIsVisibleAndNeverOverlaps() {
+        scenario.onActivity { activity ->
+            val textViews = descendants(activity.window.decorView)
+                .filterIsInstance<TextView>()
+            val safety = textViews.first {
+                it.text.toString() == "ИНФОРМАЦИЯ • НЕ БК"
+            }
+            val title = textViews.first {
+                it.text.toString() == "Матч-день"
+            }
+            val timeline = textViews.first {
+                it.text.toString().startsWith("Сейчас ") &&
+                    "Проверить" in it.text.toString()
+            }
+            val catalog = textViews.first {
+                "событ" in it.text.toString() &&
+                    "сохранено" in it.text.toString()
+            }
+            val compactViewport =
+                activity.resources.configuration.fontScale < 1.3f &&
+                    activity.resources.configuration.screenHeightDp < 840
+            if (compactViewport) {
+                assertEquals(View.GONE, timeline.visibility)
+                assertEquals(View.GONE, catalog.visibility)
+            }
+            val stack = if (compactViewport) {
+                listOf(safety, title)
+            } else {
+                listOf(safety, title, timeline, catalog)
+            }
+            val bounds = stack.map { view ->
+                Rect().also { visible ->
+                    assertTrue(
+                        "Briefing item is not visible: ${view.text}",
+                        view.getGlobalVisibleRect(visible)
+                    )
+                    assertTrue(
+                        "Briefing item is clipped: ${view.text}, " +
+                            "visible=${visible.width()}x${visible.height()}, " +
+                            "actual=${view.width}x${view.height}",
+                        visible.width() >= view.width - 2 &&
+                            visible.height() >= view.height - 2
+                    )
+                }
+            }
+            bounds.zipWithNext().forEach { (first, second) ->
+                assertTrue(
+                    "Briefing items overlap: $first and $second",
+                    first.bottom <= second.top
+                )
+            }
+        }
+    }
+
     private fun descendants(root: View): List<View> {
         return buildList {
             add(root)
