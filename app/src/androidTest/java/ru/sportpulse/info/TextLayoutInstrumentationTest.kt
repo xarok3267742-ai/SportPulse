@@ -374,6 +374,12 @@ class TextLayoutInstrumentationTest {
         clickTab("Чек-листы")
         audit("Чек-листы", failures)
         clickTab("Гид")
+        assertTextPresent("Навигатор проверки")
+        assertTextPresent("ВАШ МАРШРУТ")
+        assertTextPresent("Справка по запросу")
+        assertContentDescriptionStartingWith(
+            "Навигатор проверки: пять этапов"
+        )
         audit("Гид", failures)
         clickTab("18+")
         audit("18+", failures)

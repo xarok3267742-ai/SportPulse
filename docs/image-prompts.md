@@ -834,3 +834,23 @@ Avoid: cyberpunk neon, glowing infinity symbol, holograms, decorative dashboard,
 ```
 
 Generated with the built-in image generation tool using `decision_ledger.jpg`, `collection_xray.jpg` and `decision_preflight_v3130.jpg` as material and process references. The selected output was optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/process_profile_cycle_v3140.jpg`. The decision capsule, post-event inspection lens, calibration dial and return path remain distinct in the compact crop; all metrics and status copy remain native Android elements.
+
+## Guide navigator
+
+```text
+Use case: productivity-visual
+Asset type: compact wide 16:9 image header for the contextual Guide Navigator in the Sport Pulse Android sports-analysis application
+Primary request: create an original physical orientation instrument that immediately communicates one current next step inside a five-stage disciplined sports-data workflow; this is a navigation aid for verification, never a betting recommendation or prediction
+Scene/backdrop: top-down professional sports operations bench overlooking a real multi-sport venue, with a narrow crisp strip of football pitch, basketball court and ice rink only along the far upper edge
+Subject: one central precision mechanical selector ring with a single restrained cyan pointer, surrounded by exactly five distinct tactile workflow objects arranged in a clean shallow arc from left to right: a blank event tile, a three-slot planning tray, one transparent source-verification capsule under a small optical lens, one sealed graphite decision ledger, and one post-event review dial; one thin cyan physical rail passes through all five objects in that exact order and meets the central selector once; the pointer visibly targets only the transparent source-verification capsule; add one tiny amber caution marker beside that target and one tiny red stop notch before the sealed ledger
+Narrative: orient the user, identify exactly one next check, then continue through decision and review; no object should imply success, reward or a likely match outcome
+Style/medium: premium photorealistic editorial product photography, realistic industrial design, quiet sports newsroom aesthetic, matte graphite hardware and precise optical materials
+Composition/framing: wide 16:9; all five objects and the central selector fully visible, evenly spaced in the middle 46 percent of the image, crop-safe for a mobile header near 3:1; keep the lower-left and lower-center darker and low-detail for native white Android title overlay; strong visual hierarchy centered on the selector and targeted source capsule
+Lighting/mood: crisp neutral stadium spill light, calm, rigorous, instructive and trustworthy, non-promotional
+Color palette: balanced charcoal graphite, brushed neutral metal, clear glass, off-white blank paper, natural field green, restrained cyan, one tiny amber accent and one tiny safety-red notch; no purple, no orange dominance, no monochrome blue
+Materials/textures: matte anodized metal, optical glass, clear polycarbonate, fine blank paper fibers, precise engraved-but-unlabeled mechanical rings, subtle realistic wear
+Constraints: exactly five workflow objects plus one central selector; exactly one cyan pointer targeting only the source capsule; exactly one continuous cyan rail; exactly one amber marker and one red notch; no readable text, no letters, no numbers, no icons, no logos, no team crests, no scores, no odds, no percentages, no money, no betting slips, no casino objects, no charts, no floating UI, no people, no hands, no phone, no watermark; all primary hardware sharp and inspectable
+Avoid: cyberpunk neon, holograms, glowing compass rose, decorative dashboard, gradient background, bokeh blobs, marketing hero, trophy, celebration, reward imagery, duplicated objects, extra stations, clutter, pseudo-text, dark unreadable hardware, blurred primary subject
+```
+
+Generated with the built-in image generation tool without source-image references. The selected output was optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/guide_navigator_v3150.jpg`. The five physical stages and one current pointer remain legible in the compact mobile crop; all stage, progress, event and action copy remains native Android content.

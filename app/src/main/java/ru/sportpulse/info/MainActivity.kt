@@ -113,6 +113,7 @@ class MainActivity : Activity() {
     private var analysisEventAnchor: View? = null
     private var decisionDeskOverviewAnchor: View? = null
     private var decisionDeskWorkspaceAnchor: View? = null
+    private var decisionDeskSectionAnchor: View? = null
     private var passportExportInProgress = false
     private var eventPackageImportInProgress = false
     private var decisionDistanceDraft =
@@ -11145,6 +11146,7 @@ class MainActivity : Activity() {
         )
         decisionDeskOverviewAnchor = null
         decisionDeskWorkspaceAnchor = null
+        decisionDeskSectionAnchor = null
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(
@@ -11158,6 +11160,7 @@ class MainActivity : Activity() {
                         result = result
                     )
                     decisionDeskOverviewAnchor = overview
+                    decisionDeskSectionAnchor = overview
                     addView(overview, matchWrap(top = 10))
                     if (decisionDeskWorkspaceExpanded) {
                         val workspace = decisionDeskDecisionPanel(
@@ -11170,14 +11173,16 @@ class MainActivity : Activity() {
                         addView(workspace, matchWrap(top = 16))
                     }
                 }
-                DecisionDeskSection.HISTORY -> addView(
-                    decisionDeskHistoryPanel(),
-                    matchWrap(top = 10)
-                )
-                DecisionDeskSection.PROFILE -> addView(
-                    decisionDeskProfilePanel(),
-                    matchWrap(top = 10)
-                )
+                DecisionDeskSection.HISTORY -> {
+                    val history = decisionDeskHistoryPanel()
+                    decisionDeskSectionAnchor = history
+                    addView(history, matchWrap(top = 10))
+                }
+                DecisionDeskSection.PROFILE -> {
+                    val profile = decisionDeskProfilePanel()
+                    decisionDeskSectionAnchor = profile
+                    addView(profile, matchWrap(top = 10))
+                }
             }
         }
     }
@@ -22610,14 +22615,434 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun quickStartGuidePanel(): LinearLayout {
+    private fun guideNavigatorMission(
+        event: SportEvent?
+    ): GuideNavigatorMission {
+        val now = System.currentTimeMillis()
+        val draft = event?.let {
+            state.decisionDeskDraft(it.id)
+        }
+        val recordedFactCount = event?.let { selected ->
+            SignalFactor.values().count { factor ->
+                state.factReceipt(selected.id, factor).integrity ==
+                    FactReceiptIntegrity.VALID
+            }
+        } ?: 0
+        val nextFactor = event?.let { selected ->
+            PlainAnalyticsEngine.evaluate(
+                assessment = state.assessment(selected),
+                evidence = state.evidence(selected),
+                timeline = state.evidenceTimeline(
+                    eventId = selected.id,
+                    now = now
+                ),
+                now = now
+            ).actionFactor
+        } ?: SignalFactor.SOURCES
+        val snapshot = event?.let {
+            state.decisionSnapshot(it.id)
+        }
+        val reviewFinalized = event?.let {
+            state.postEventReview(it.id)?.isFinalized == true
+        } == true
+        return GuideNavigatorEngine.evaluate(
+            GuideNavigatorInput(
+                hasSelectedEvent = event != null,
+                missingPlanFields = draft?.missingFields
+                    ?: DecisionDeskField.values().toList(),
+                recordedFactCount = recordedFactCount,
+                hasDecision = snapshot != null,
+                reviewFinalized = reviewFinalized,
+                nextFactor = nextFactor
+            )
+        )
+    }
+
+    private fun guideNavigatorPanel(
+        event: SportEvent?,
+        mission: GuideNavigatorMission
+    ): LinearLayout {
+        val tone = when (mission.stage) {
+            GuideNavigatorStage.EVENT,
+            GuideNavigatorStage.PLAN ->
+                Tone(AppColors.signal, AppColors.signalSoft)
+            GuideNavigatorStage.FACT,
+            GuideNavigatorStage.REVIEW ->
+                Tone(AppColors.warning, AppColors.warningSoft)
+            GuideNavigatorStage.DECISION,
+            GuideNavigatorStage.COMPLETE ->
+                Tone(AppColors.accentDark, AppColors.accentSoft)
+        }
+        val stackProgressHeader =
+            resources.configuration.screenWidthDp < 380 ||
+                effectiveFontScale() >= 1.3f
+        return card(padding = 12).apply {
+            addView(
+                imageFrame().apply {
+                    addView(
+                        ImageView(this@MainActivity).apply {
+                            setImageResource(
+                                R.drawable.guide_navigator_v3150
+                            )
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                            contentDescription =
+                                "Навигатор проверки: пять этапов от выбора события до постсобытийного разбора; текущий этап — ${mission.title}"
+                        },
+                        frameMatch()
+                    )
+                    addView(
+                        View(this@MainActivity).apply {
+                            background = gradientScrim(compact = true)
+                        },
+                        frameMatch()
+                    )
+                    addView(
+                        label(
+                            mission.badge,
+                            tone.foreground,
+                            Color.WHITE
+                        ),
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            Gravity.TOP or Gravity.START
+                        ).apply {
+                            leftMargin = dp(12)
+                            topMargin = dp(12)
+                        }
+                    )
+                    addView(
+                        text(
+                            mission.title,
+                            19f,
+                            Color.WHITE,
+                            Typeface.BOLD
+                        ).apply {
+                            maxLines = 2
+                            setTextSize(
+                                TypedValue.COMPLEX_UNIT_PX,
+                                19f *
+                                    resources.displayMetrics.density *
+                                    min(effectiveFontScale(), 1.35f)
+                            )
+                        },
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            Gravity.BOTTOM
+                        ).apply {
+                            leftMargin = dp(12)
+                            rightMargin = dp(12)
+                            bottomMargin = dp(11)
+                        }
+                    )
+                },
+                matchFixed(
+                    if (effectiveFontScale() >= 1.8f) 182 else 150
+                )
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = if (stackProgressHeader) {
+                        LinearLayout.VERTICAL
+                    } else {
+                        LinearLayout.HORIZONTAL
+                    }
+                    gravity = if (stackProgressHeader) {
+                        Gravity.START
+                    } else {
+                        Gravity.CENTER_VERTICAL
+                    }
+                    addView(
+                        text(
+                            "ВАШ МАРШРУТ",
+                            10.5f,
+                            AppColors.muted,
+                            Typeface.BOLD
+                        ),
+                        if (stackProgressHeader) {
+                            matchWrap()
+                        } else {
+                            LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f
+                            )
+                        }
+                    )
+                    val progressValue = text(
+                        mission.progressDescription,
+                        11.5f,
+                        tone.foreground,
+                        Typeface.BOLD
+                    )
+                    if (stackProgressHeader) {
+                        addView(progressValue, matchWrap(top = 2))
+                    } else {
+                        addView(progressValue)
+                    }
+                },
+                matchWrap(top = 13)
+            )
+            addView(
+                horizontalProgress().apply {
+                    max = GuideNavigatorMission.TOTAL_STEPS
+                    progress = mission.completedSteps
+                    progressTintList =
+                        ColorStateList.valueOf(tone.foreground)
+                    contentDescription = mission.progressDescription
+                },
+                matchFixed(7, top = 6)
+            )
+            addView(
+                text(
+                    if (event == null) {
+                        "СОБЫТИЕ НЕ ВЫБРАНО"
+                    } else {
+                        "СОБЫТИЕ • ${event.match}"
+                    },
+                    11.5f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 13)
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    background = rounded(tone.background, 7)
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    addView(
+                        text(
+                            "ПОЧЕМУ СЕЙЧАС",
+                            10.5f,
+                            tone.foreground,
+                            Typeface.BOLD
+                        )
+                    )
+                    addView(
+                        text(
+                            mission.explanation,
+                            13.5f,
+                            AppColors.ink,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 4)
+                    )
+                },
+                matchWrap(top = 8)
+            )
+            addView(
+                commandButton(
+                    mission.actionTitle,
+                    tone.foreground
+                ) {
+                    openGuideNavigatorMission(mission)
+                },
+                matchWrap(top = 12)
+            )
+            addView(
+                text(
+                    "Шаг определяется только локальными записями выбранного события. Он не является прогнозом или советом сделать ставку.",
+                    11.5f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 9)
+            )
+        }
+    }
+
+    private fun openGuideNavigatorMission(
+        mission: GuideNavigatorMission
+    ) {
+        when (mission.stage) {
+            GuideNavigatorStage.EVENT -> selectTab(0)
+            GuideNavigatorStage.PLAN -> {
+                activeDecisionDeskSection =
+                    DecisionDeskSection.DECISION
+                decisionDeskWorkspaceExpanded = true
+                pendingDecisionDeskField = mission.planField
+                selectTab(1, scrollToContent = false)
+            }
+            GuideNavigatorStage.FACT ->
+                mission.factor?.let(::openPulseFactor)
+            GuideNavigatorStage.DECISION,
+            GuideNavigatorStage.REVIEW -> {
+                activeDecisionDeskSection =
+                    DecisionDeskSection.DECISION
+                decisionDeskWorkspaceExpanded = false
+                pendingDecisionDeskField = null
+                activePulseWorkspaceMode = PulseWorkspaceMode.LAB
+                activePulseLabSection = PulseLabSection.DECISION
+                state.selectedPulseWorkspaceMode =
+                    PulseWorkspaceMode.LAB
+                pendingPulseFactor = null
+                pendingPulseStoryAction = if (
+                    mission.stage == GuideNavigatorStage.REVIEW
+                ) {
+                    EventStoryAction.OPEN_REVIEW
+                } else {
+                    EventStoryAction.OPEN_DECISION
+                }
+                selectTab(1, scrollToContent = false)
+            }
+            GuideNavigatorStage.COMPLETE -> {
+                activeDecisionDeskSection =
+                    DecisionDeskSection.PROFILE
+                decisionDeskWorkspaceExpanded = false
+                pendingDecisionDeskField = null
+                selectTab(1, scrollToContent = false)
+                decisionDeskSectionAnchor?.let {
+                    scrollToAppView(it, topOffsetDp = 10)
+                }
+            }
+        }
+    }
+
+    private fun guideReferencePanel(): LinearLayout {
+        val stack =
+            resources.configuration.screenWidthDp < 380 ||
+                effectiveFontScale() >= 1.3f
+        return card().apply {
+            addView(
+                text(
+                    "Справка по запросу",
+                    20f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                )
+            )
+            addView(
+                text(
+                    "Короткий маршрут, подробное обучение и словарь открываются отдельно, не прерывая текущий шаг.",
+                    13f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 5)
+            )
+            addView(
+                commandButton(
+                    "Показать обучение по шагам",
+                    AppColors.signal
+                ) {
+                    showProductTour()
+                },
+                matchWrap(top = 12)
+            )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = if (stack) {
+                        LinearLayout.VERTICAL
+                    } else {
+                        LinearLayout.HORIZONTAL
+                    }
+                    addView(
+                        outlineButton(
+                            "Быстрый старт",
+                            AppColors.signal
+                        ) {
+                            showGuideReferenceDialog { close ->
+                                quickStartGuidePanel {
+                                    close()
+                                    showProductTour()
+                                }
+                            }
+                        },
+                        if (stack) {
+                            matchWrap()
+                        } else {
+                            LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f
+                            ).apply { marginEnd = dp(4) }
+                        }
+                    )
+                    addView(
+                        outlineButton(
+                            "Словарь терминов",
+                            AppColors.signal
+                        ) {
+                            showGuideReferenceDialog {
+                                analyticsDictionaryPanel()
+                            }
+                        },
+                        if (stack) {
+                            matchWrap(top = 8)
+                        } else {
+                            LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f
+                            ).apply { marginStart = dp(4) }
+                        }
+                    )
+                },
+                matchWrap(top = 8)
+            )
+        }
+    }
+
+    private fun showGuideReferenceDialog(
+        contentFactory: (() -> Unit) -> View
+    ) {
+        lateinit var dialog: AlertDialog
+        val closeDialog = { dialog.dismiss() }
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(8))
+            addView(contentFactory(closeDialog), matchWrap())
+        }
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(4), dp(16), dp(16))
+            addView(
+                outlineButton("Закрыть", AppColors.muted) {
+                    dialog.dismiss()
+                },
+                matchWrap()
+            )
+        }
+        val height = min(
+            if (effectiveFontScale() >= 1.8f) 720 else 620,
+            resources.configuration.screenHeightDp - 72
+        ).coerceAtLeast(360)
+        val shell = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(height)
+            )
+            addView(
+                ScrollView(this@MainActivity).apply {
+                    isFillViewport = true
+                    isVerticalScrollBarEnabled = true
+                    addView(body, matchWrap())
+                },
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+                )
+            )
+            addView(actions, matchWrap())
+        }
+        dialog = AlertDialog.Builder(this)
+            .setView(shell)
+            .create()
+        dialog.show()
+    }
+
+    private fun quickStartGuidePanel(
+        onShowTour: () -> Unit
+    ): LinearLayout {
         return card().apply {
             addView(text("Быстрый старт", 20f, AppColors.ink, Typeface.BOLD))
             addView(
                 guideStepRow(
                     number = "1",
                     title = "Выберите событие",
-                    body = "В «Матчах» откройте строку матч-центра. Событие с первой проверкой отмечено прямо в списке."
+                    body = "Откройте матч в «Матчах». Вся дальнейшая проверка будет привязана только к нему."
                 ),
                 matchWrap(top = 12)
             )
@@ -22625,7 +23050,7 @@ class MainActivity : Activity() {
                 guideStepRow(
                     number = "2",
                     title = "Прочитайте табло",
-                    body = "В «Штабе» сначала видны статус, готовность замысла, причина и одна команда. Сразу под табло выберите глубину: короткий итог или полный аудит."
+                    body = "В «Штабе» сначала прочитайте статус, причину и одно следующее действие."
                 ),
                 matchWrap(top = 10)
             )
@@ -22633,7 +23058,7 @@ class MainActivity : Activity() {
                 guideStepRow(
                     number = "3",
                     title = "Откройте рабочую форму",
-                    body = "Раскройте её только для редактирования. Постройте сценарии A и B и проведите наблюдаемую стоп-линию."
+                    body = "Ответьте на три вопроса: идея матча, альтернативный сценарий и наблюдаемая стоп-линия."
                 ),
                 matchWrap(top = 10)
             )
@@ -22641,7 +23066,7 @@ class MainActivity : Activity() {
                 guideStepRow(
                     number = "4",
                     title = "Проверьте один пробел",
-                    body = "Сначала запишите один факт и первичный источник. Этого достаточно для уровня «1 источник». Второй источник и полноту открывайте только после отдельной проверки."
+                    body = "Запишите минимум один проверяемый факт и его первичный источник."
                 ),
                 matchWrap(top = 10)
             )
@@ -22649,7 +23074,7 @@ class MainActivity : Activity() {
                 guideStepRow(
                     number = "5",
                     title = "Проверьте и зафиксируйте",
-                    body = "Сначала выберите «Пропустить», «Наблюдать» или «Факты сверены» и прочитайте будущую запись. Только отдельная команда фиксации создаёт предстартовый снимок. Это оценка качества проверки, не прогноз."
+                    body = "Выберите итог и отдельно сохраните снимок до матча. После события сравните те же пять факторов."
                 ),
                 matchWrap(top = 10)
             )
@@ -22658,7 +23083,7 @@ class MainActivity : Activity() {
                     "Показать обучение по шагам",
                     AppColors.signal
                 ) {
-                    showProductTour()
+                    onShowTour()
                 },
                 matchWrap(top = 14)
             )
@@ -22670,35 +23095,78 @@ class MainActivity : Activity() {
         title: String,
         body: String
     ): LinearLayout {
+        val stack =
+            resources.configuration.screenWidthDp < 380 ||
+                effectiveFontScale() >= 1.3f
         return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.TOP
-            addView(
-                text(
-                    number,
-                    fixedControlTextSize(16f),
-                    Color.WHITE,
-                    Typeface.BOLD
-                ).apply {
-                    gravity = Gravity.CENTER
-                    background = rounded(AppColors.accent, 18)
-                },
-                LinearLayout.LayoutParams(dp(36), dp(36)).apply {
-                    rightMargin = dp(11)
-                }
-            )
-            addView(
-                LinearLayout(this@MainActivity).apply {
-                    orientation = LinearLayout.VERTICAL
-                    addView(text(title, 16f, AppColors.ink, Typeface.BOLD))
-                    addView(text(body, 13.5f, AppColors.muted), matchWrap(top = 4))
-                },
-                LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
+            orientation = LinearLayout.VERTICAL
+            val numberView = text(
+                number,
+                fixedControlTextSize(16f),
+                Color.WHITE,
+                Typeface.BOLD
+            ).apply {
+                gravity = Gravity.CENTER
+                background = rounded(AppColors.accent, 18)
+            }
+            if (stack) {
+                addView(
+                    LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        addView(
+                            numberView,
+                            LinearLayout.LayoutParams(dp(36), dp(36)).apply {
+                                rightMargin = dp(11)
+                            }
+                        )
+                        addView(
+                            text(title, 16f, AppColors.ink, Typeface.BOLD),
+                            LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f
+                            )
+                        )
+                    },
+                    matchWrap()
                 )
-            )
+                addView(
+                    text(body, 13.5f, AppColors.muted),
+                    matchWrap(top = 7)
+                )
+            } else {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.TOP
+                addView(
+                    numberView,
+                    LinearLayout.LayoutParams(dp(36), dp(36)).apply {
+                        rightMargin = dp(11)
+                    }
+                )
+                addView(
+                    LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(
+                            text(
+                                title,
+                                16f,
+                                AppColors.ink,
+                                Typeface.BOLD
+                            )
+                        )
+                        addView(
+                            text(body, 13.5f, AppColors.muted),
+                            matchWrap(top = 4)
+                        )
+                    },
+                    LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                )
+            }
         }
     }
 
@@ -23253,19 +23721,25 @@ class MainActivity : Activity() {
     }
 
     private fun renderGuide() {
+        val selectedEvent = catalogEvents.firstOrNull {
+            it.id == state.selectedEventId
+        }
+        val mission = guideNavigatorMission(selectedEvent)
         content.addView(
             sectionTitle(
-                "Как пользоваться",
-                "Пять шагов от выбора матча до проверяемого решения."
+                "Навигатор проверки",
+                "Один следующий шаг по реальному состоянию выбранного события."
             )
         )
-        content.addView(quickStartGuidePanel(), matchWrap(top = 12))
-        content.addView(analyticsDictionaryPanel(), matchWrap(top = 12))
-        val calibrationMemory = CalibrationMemoryEngine.evaluate(
-            state.calibrationRecords()
+        content.addView(
+            guideNavigatorPanel(
+                event = selectedEvent,
+                mission = mission
+            ),
+            matchWrap(top = 12)
         )
         content.addView(
-            calibrationMemoryPanel(calibrationMemory),
+            guideReferencePanel(),
             matchWrap(top = 12)
         )
 
@@ -23338,7 +23812,15 @@ class MainActivity : Activity() {
         )
         progressPanel.addView(progressBar, matchFixed(7, top = 13))
         progressPanel.addView(completion, matchWrap(top = 12))
-        content.addView(progressPanel, matchWrap(top = 12))
+        progressPanel.addView(
+            text(
+                "ПУНКТЫ ПРОВЕРКИ • ${DemoCatalog.guideSteps.size}",
+                11f,
+                AppColors.muted,
+                Typeface.BOLD
+            ),
+            matchWrap(top = 16)
+        )
 
         DemoCatalog.guideSteps.forEachIndexed { index, step ->
             val checkbox = CheckBox(this).apply {
@@ -23357,11 +23839,18 @@ class MainActivity : Activity() {
                 }
             }
             checkBoxes.add(checkbox)
-            content.addView(
-                card().apply { addView(checkbox) },
-                matchWrap(top = 10)
+            if (index > 0) {
+                progressPanel.addView(
+                    divider(),
+                    matchFixed(1, top = 7, bottom = 7)
+                )
+            }
+            progressPanel.addView(
+                checkbox,
+                matchWrap(top = if (index == 0) 8 else 0)
             )
         }
+        content.addView(progressPanel, matchWrap(top = 12))
 
         reset.setOnClickListener {
             state.clearGuide()
@@ -23391,6 +23880,21 @@ class MainActivity : Activity() {
             completion.setPadding(dp(11), dp(10), dp(11), dp(10))
         }
         refreshProgress()
+
+        val calibrationMemory = CalibrationMemoryEngine.evaluate(
+            state.calibrationRecords()
+        )
+        content.addView(
+            sectionTitle(
+                "После события",
+                "Разбор превращает отдельное решение в навык проверки."
+            ),
+            matchWrap(top = 20)
+        )
+        content.addView(
+            calibrationMemoryPanel(calibrationMemory),
+            matchWrap(top = 12)
+        )
     }
 
     private fun calibrationMemoryPanel(
