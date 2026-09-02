@@ -244,6 +244,23 @@ class TextLayoutInstrumentationTest {
         audit("Лента / Пустой поиск", failures)
         clearEventSearch()
         clickText("Инструменты")
+        assertTextPresent("Можно ли начинать разбор?")
+        assertTextPresent("РАСПИСАНИЕ СВЕЖЕЕ")
+        assertTextPresent("ГРАНИЦА ВЫВОДА")
+        assertTextAbsent("API-Sports")
+        assertTextAbsent("осталось запросов")
+        clickText("Показать технические детали")
+        assertTextStartingWithPresent("ОНЛАЙН-РАСПИСАНИЕ")
+        assertTextContainingPresent(
+            "Канал: HTTPS через сервер приложения"
+        )
+        assertTextAbsent("API-Sports")
+        assertTextAbsent("осталось запросов")
+        scenario.recreate()
+        instrumentation.waitForIdleSync()
+        assertTextPresent("Скрыть технические детали")
+        clickText("Скрыть технические детали")
+        assertTextStartingWithAbsent("ОНЛАЙН-РАСПИСАНИЕ")
         submitEventSearch("akademiya 9101")
         assertTextPresent("СОВПАДЕНИЕ • КОМАНДА")
         audit("Лента / Инструменты / Поиск", failures)
@@ -594,6 +611,42 @@ class TextLayoutInstrumentationTest {
                     .flatMap(::descendants)
                     .filterIsInstance<TextView>()
                     .none { it.text.toString() == title }
+            )
+        }
+    }
+
+    private fun assertTextStartingWithPresent(prefix: String) {
+        scenario.onActivity { activity ->
+            assertTrue(
+                "Text not found by prefix: $prefix",
+                windowRoots(activity)
+                    .flatMap(::descendants)
+                    .filterIsInstance<TextView>()
+                    .any { it.text.toString().startsWith(prefix) }
+            )
+        }
+    }
+
+    private fun assertTextStartingWithAbsent(prefix: String) {
+        scenario.onActivity { activity ->
+            assertTrue(
+                "Unexpected text is visible by prefix: $prefix",
+                windowRoots(activity)
+                    .flatMap(::descendants)
+                    .filterIsInstance<TextView>()
+                    .none { it.text.toString().startsWith(prefix) }
+            )
+        }
+    }
+
+    private fun assertTextContainingPresent(fragment: String) {
+        scenario.onActivity { activity ->
+            assertTrue(
+                "Text not found by fragment: $fragment",
+                windowRoots(activity)
+                    .flatMap(::descendants)
+                    .filterIsInstance<TextView>()
+                    .any { it.text.toString().contains(fragment) }
             )
         }
     }

@@ -102,6 +102,7 @@ class MainActivity : Activity() {
     private var activeFeedTimeFilter = FeedTimelineFilter.ALL
     private var focusEventLimit = FOCUS_EVENT_PAGE_SIZE
     private var apiUpdatePulseExpanded = false
+    private var sourceReadinessDetailsExpanded = false
     private var updateRadarExpanded = false
     private var decisionLedgerExpanded = false
     private var pulseStoryControlsExpanded = false
@@ -203,6 +204,10 @@ class MainActivity : Activity() {
             ?: FOCUS_EVENT_PAGE_SIZE
         apiUpdatePulseExpanded = savedInstanceState?.getBoolean(
             STATE_API_UPDATE_PULSE_EXPANDED,
+            false
+        ) ?: false
+        sourceReadinessDetailsExpanded = savedInstanceState?.getBoolean(
+            STATE_SOURCE_READINESS_DETAILS_EXPANDED,
             false
         ) ?: false
         updateRadarExpanded = savedInstanceState?.getBoolean(
@@ -346,6 +351,10 @@ class MainActivity : Activity() {
         outState.putBoolean(
             STATE_API_UPDATE_PULSE_EXPANDED,
             apiUpdatePulseExpanded
+        )
+        outState.putBoolean(
+            STATE_SOURCE_READINESS_DETAILS_EXPANDED,
+            sourceReadinessDetailsExpanded
         )
         outState.putBoolean(
             STATE_UPDATE_RADAR_EXPANDED,
@@ -1206,10 +1215,10 @@ class MainActivity : Activity() {
         )
         content.addView(
             eventSearchPanel(),
-            matchWrap(top = 6)
+            matchWrap(top = 4)
         )
-        content.addView(filterBar(), matchWrap(top = 6))
-        content.addView(feedTimelineBar(), matchWrap(top = 8))
+        content.addView(filterBar(), matchWrap(top = 4))
+        content.addView(feedTimelineBar(), matchWrap(top = 4))
         if (activeFeedWorkspaceMode == FeedWorkspaceMode.FOCUS) {
             renderFeedFocusMode()
             return
@@ -5194,238 +5203,329 @@ class MainActivity : Activity() {
         val activePackage = eventPackage?.takeUnless {
             it.isExpired(now)
         }
-        val apiActive =
-            activeCatalogOrigin == SportEventOrigin.API_SPORTS
+        val readiness = sourceReadiness(now)
+        val tone = sourceReadinessTone(readiness.level)
         val apiConfigured = apiFootballConfigured()
-        val tone = when {
-            activePackage?.authenticity?.keyEnvironment ==
-                EventPackageKeyEnvironment.PRODUCTION ->
-                Tone(AppColors.accentDark, AppColors.accentSoft)
-            activePackage?.authenticity?.keyEnvironment ==
-                EventPackageKeyEnvironment.DEVELOPMENT ->
-                Tone(AppColors.signal, AppColors.signalSoft)
-            activePackage != null ->
-                Tone(AppColors.warning, AppColors.warningSoft)
-            apiActive ->
-                Tone(AppColors.accentDark, AppColors.accentSoft)
-            eventPackage != null ->
-                Tone(AppColors.danger, AppColors.dangerSoft)
-            apiFootballRefreshInProgress ->
-                Tone(AppColors.signal, AppColors.signalSoft)
-            apiFootballError != null ->
-                Tone(AppColors.warning, AppColors.warningSoft)
-            else ->
-                Tone(AppColors.signal, AppColors.signalSoft)
-        }
-        val badgeTitle = when {
-            activePackage?.authenticity?.keyEnvironment ==
-                EventPackageKeyEnvironment.PRODUCTION ->
-                "ПОДПИСАН • ${activePackage.events.size}"
-            activePackage?.authenticity?.keyEnvironment ==
-                EventPackageKeyEnvironment.DEVELOPMENT ->
-                "ДЕМО-ПОДПИСЬ • ${activePackage.events.size}"
-            activePackage != null ->
-                "БЕЗ ПОДПИСИ • ${activePackage.events.size}"
-            apiActive ->
-                "ОНЛАЙН • ${catalogEvents.size}"
-            eventPackage != null ->
-                "ПАКЕТ ИСТЕК"
-            apiFootballRefreshInProgress ->
-                "ОБНОВЛЕНИЕ"
-            else ->
-                "ДЕМО-КАТАЛОГ"
-        }
-        val status = when {
-            activePackage?.authenticity?.keyEnvironment ==
-                EventPackageKeyEnvironment.PRODUCTION ->
-                "Источник подтвержден подписью: ${activePackage.sourceLabel}\n${activePackage.events.size} событий • до ${formatPackageDate(activePackage.validUntil)} • payload ${activePackage.shortFingerprint}"
-            activePackage?.authenticity?.keyEnvironment ==
-                EventPackageKeyEnvironment.DEVELOPMENT ->
-                "Демо-подпись подтверждена: ${activePackage.sourceLabel}\n${activePackage.events.size} событий • до ${formatPackageDate(activePackage.validUntil)} • payload ${activePackage.shortFingerprint}"
-            activePackage != null ->
-                "Локальный пакет без подписи: ${activePackage.sourceLabel}\n${activePackage.events.size} событий • до ${formatPackageDate(activePackage.validUntil)} • payload ${activePackage.shortFingerprint}"
-            apiFootballRefreshInProgress && apiFootballFeed == null ->
-                "Загружаем футбольные события России и СНГ на сегодня и два следующих дня."
-            apiActive -> {
-                val feed = checkNotNull(apiFootballFeed)
-                "Онлайн-расписание • футбол • ${feed.fixtures.size} событий\n" +
-                    "Обновлено ${formatPackageDate(feed.fetchedAt)} " +
-                    "• окно ${feed.fromDate}–${feed.toDate}"
-            }
-            eventPackage != null ->
-                "Пакет «${eventPackage.sourceLabel}» истек ${formatPackageDate(eventPackage.validUntil)}. Сейчас показан демо-каталог."
-            apiFootballError != null ->
-                checkNotNull(apiFootballError)
-            !apiConfigured ->
-                "Онлайн-расписание недоступно в этой сборке. Показан демо-каталог."
-            apiFootballFeed != null ->
-                "Онлайн-расписание обновлено, но в окне трёх дней нет событий из выбранных стран. Показан демо-каталог."
-            else ->
-                "Активны ${DemoCatalog.events.size} демонстрационных событий. Даты, составы и результаты требуют официальной сверки."
-        }
-        val trustTone = when {
-            activePackage?.authenticity?.keyEnvironment ==
-                EventPackageKeyEnvironment.PRODUCTION ->
-                Tone(AppColors.accentDark, AppColors.accentSoft)
-            activePackage?.authenticity?.keyEnvironment ==
-                EventPackageKeyEnvironment.DEVELOPMENT ->
-                Tone(AppColors.signal, AppColors.signalSoft)
-            activePackage != null ->
-                Tone(AppColors.warning, AppColors.warningSoft)
-            apiActive ->
-                Tone(AppColors.accentDark, AppColors.accentSoft)
-            eventPackage != null ->
-                Tone(AppColors.warning, AppColors.warningSoft)
-            else ->
-                Tone(AppColors.muted, AppColors.background)
-        }
-        val trustStatus = when {
-            activePackage != null -> packageTrustStatus(activePackage)
-            apiActive ->
-                "HTTPS • ВНЕШНИЙ ИСТОЧНИК\n" +
-                    "Источник подтверждает расписание и статус, но не ваш аналитический вывод."
-            eventPackage != null -> packageTrustStatus(eventPackage)
-            else -> packageTrustStatus(null)
-        }
-        val importButton = commandButton(
-            if (eventPackageImportInProgress) {
-                "Проверяем пакет..."
-            } else {
-                "Выбрать Event Pack JSON"
-            },
-            AppColors.signal
-        ) {
-            launchEventPackagePicker()
-        }.apply {
-            isEnabled = !eventPackageImportInProgress
-            alpha = if (eventPackageImportInProgress) 0.65f else 1f
-        }
-        val stackSourceHeader =
-            resources.configuration.fontScale >= 1.3f ||
-                resources.configuration.screenWidthDp < 380
-
-        return card().apply {
+        return card(padding = 0).apply {
+            clipToOutline = true
+            addView(
+                sourceReadinessHeader(),
+                matchFixed(imageHeaderHeight(116))
+            )
             addView(
                 LinearLayout(this@MainActivity).apply {
-                    orientation = if (stackSourceHeader) {
-                        LinearLayout.VERTICAL
-                    } else {
-                        LinearLayout.HORIZONTAL
-                    }
-                    gravity = if (stackSourceHeader) {
-                        Gravity.START
-                    } else {
-                        Gravity.CENTER_VERTICAL
-                    }
-                    addView(
-                        text(
-                            "Источник событий",
-                            20f,
-                            AppColors.ink,
-                            Typeface.BOLD
-                        ),
-                        if (stackSourceHeader) {
-                            matchWrap()
-                        } else {
-                            LinearLayout.LayoutParams(
-                                0,
-                                LinearLayout.LayoutParams.WRAP_CONTENT,
-                                1f
-                            )
-                        }
-                    )
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(16), dp(14), dp(16), dp(16))
                     addView(
                         label(
-                            badgeTitle,
+                            readiness.badge,
                             tone.background,
                             tone.foreground
-                        ),
-                        if (stackSourceHeader) {
-                            wrapWrap(bottom = 2).apply {
-                                topMargin = dp(8)
-                            }
-                        } else {
-                            wrapWrap()
-                        }
+                        )
                     )
+                    addView(
+                        text(
+                            readiness.verdict,
+                            21f,
+                            tone.foreground,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 10)
+                    )
+                    addView(
+                        text(readiness.summary, 13.5f, AppColors.ink),
+                        matchWrap(top = 5)
+                    )
+                    readiness.checks.forEach { check ->
+                        addView(divider(), matchFixed(1, top = 12))
+                        addView(
+                            sourceReadinessCheckRow(check),
+                            matchWrap(top = 10)
+                        )
+                    }
+                    if (activePackage == null && apiConfigured) {
+                        addView(
+                            commandButton(
+                                if (apiFootballRefreshInProgress) {
+                                    "Обновляем расписание..."
+                                } else {
+                                    "Обновить расписание"
+                                },
+                                AppColors.accent
+                            ) {
+                                refreshApiFootball(force = true)
+                            }.apply {
+                                isEnabled = !apiFootballRefreshInProgress
+                                alpha = if (isEnabled) 1f else 0.65f
+                            },
+                            matchWrap(top = 14)
+                        )
+                    }
+                    val importTitle = when {
+                        eventPackageImportInProgress ->
+                            "Проверяем локальный пакет..."
+                        activePackage != null ->
+                            "Заменить локальный пакет"
+                        else -> "Импортировать локальный пакет"
+                    }
+                    val importAction = if (
+                        activePackage == null && !apiConfigured
+                    ) {
+                        commandButton(
+                            importTitle,
+                            AppColors.signal,
+                            ::launchEventPackagePicker
+                        )
+                    } else {
+                        outlineButton(
+                            importTitle,
+                            AppColors.signal,
+                            ::launchEventPackagePicker
+                        )
+                    }
+                    addView(
+                        importAction.apply {
+                            isEnabled = !eventPackageImportInProgress
+                            alpha = if (isEnabled) 1f else 0.65f
+                        },
+                        matchWrap(top = 8)
+                    )
+                    if (eventPackage != null) {
+                        addView(
+                            outlineButton(
+                                "Создать паспорт источника",
+                                AppColors.signal
+                            ) {
+                                shareSourceAuthenticityPassport(
+                                    eventPackage
+                                )
+                            },
+                            matchWrap(top = 8)
+                        )
+                        addView(
+                            outlineButton(
+                                if (activePackage != null) {
+                                    if (
+                                        apiFootballFeed
+                                            ?.fixtures
+                                            ?.isNotEmpty() == true
+                                    ) {
+                                        "Вернуться к онлайн-каталогу"
+                                    } else {
+                                        "Вернуться к учебному каталогу"
+                                    }
+                                } else {
+                                    "Удалить истёкший пакет"
+                                },
+                                AppColors.muted,
+                                ::resetEventPackage
+                            ),
+                            matchWrap(top = 8)
+                        )
+                    }
+                    addView(
+                        outlineButton(
+                            if (sourceReadinessDetailsExpanded) {
+                                "Скрыть технические детали"
+                            } else {
+                                "Показать технические детали"
+                            },
+                            AppColors.muted
+                        ) {
+                            sourceReadinessDetailsExpanded =
+                                !sourceReadinessDetailsExpanded
+                            rerenderContentPreservingScroll()
+                        },
+                        matchWrap(top = 8)
+                    )
+                    if (sourceReadinessDetailsExpanded) {
+                        addView(
+                            text(
+                                sourceReadinessTechnicalDetails(
+                                    now = now,
+                                    eventPackage = eventPackage
+                                ),
+                                11.5f,
+                                AppColors.muted,
+                                Typeface.BOLD
+                            ).apply {
+                                background = rounded(
+                                    AppColors.background,
+                                    8
+                                )
+                                setPadding(
+                                    dp(12),
+                                    dp(11),
+                                    dp(12),
+                                    dp(11)
+                                )
+                            },
+                            matchWrap(top = 8)
+                        )
+                    }
                 }
             )
+        }
+    }
+
+    private fun sourceReadiness(
+        now: Long
+    ): SourceReadinessResult {
+        return SourceReadinessEngine.evaluate(
+            now = now,
+            eventPackage = importedEventPackage,
+            apiFeed = apiFootballFeed,
+            apiActive =
+                activeCatalogOrigin == SportEventOrigin.API_SPORTS,
+            apiConfigured = apiFootballConfigured(),
+            refreshing = apiFootballRefreshInProgress,
+            apiError = apiFootballError
+        )
+    }
+
+    private fun sourceReadinessTone(
+        level: SourceReadinessLevel
+    ): Tone {
+        return when (level) {
+            SourceReadinessLevel.READY ->
+                Tone(AppColors.accentDark, AppColors.accentSoft)
+            SourceReadinessLevel.VERIFY ->
+                Tone(AppColors.warning, AppColors.warningSoft)
+            SourceReadinessLevel.STOP ->
+                Tone(AppColors.danger, AppColors.dangerSoft)
+            SourceReadinessLevel.DEMO ->
+                Tone(AppColors.signal, AppColors.signalSoft)
+        }
+    }
+
+    private fun sourceReadinessHeader(): FrameLayout {
+        return imageFrame().apply {
             addView(
-                text(
-                    status,
-                    13f,
-                    tone.foreground,
-                    Typeface.BOLD
-                ).apply {
-                    background = rounded(tone.background, 8)
-                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                ImageView(this@MainActivity).apply {
+                    setImageResource(
+                        R.drawable.source_readiness_v3120
+                    )
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    contentDescription =
+                        "Три станции контроля данных: источник, свежесть и граница вывода"
                 },
-                matchWrap(top = 11)
+                frameMatch()
             )
             addView(
-                text(
-                    trustStatus,
-                    12f,
-                    trustTone.foreground,
-                    Typeface.BOLD
-                ).apply {
-                    background = rounded(trustTone.background, 8)
-                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                View(this@MainActivity).apply {
+                    background = gradientScrim(compact = true)
+                    importantForAccessibility =
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO
                 },
-                matchWrap(top = 8)
+                frameMatch()
             )
-            if (activePackage == null) {
-                addView(
-                    outlineButton(
-                        when {
-                            apiFootballRefreshInProgress ->
-                                "Обновляем расписание..."
-                            apiConfigured ->
-                                "Обновить события"
-                            else -> "Онлайн-источник недоступен"
-                        },
-                        AppColors.accent
-                    ) {
-                        refreshApiFootball(force = true)
-                    }.apply {
-                        isEnabled =
-                            apiConfigured &&
-                            !apiFootballRefreshInProgress
-                        alpha = if (isEnabled) 1f else 0.55f
-                    },
-                    matchWrap(top = 12)
-                )
-            }
-            addView(importButton, matchWrap(top = 12))
-            if (eventPackage != null) {
-                addView(
-                    outlineButton(
-                        "Создать паспорт источника",
-                        AppColors.signal
-                    ) {
-                        shareSourceAuthenticityPassport(
-                            eventPackage
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(
+                        text(
+                            "КОНТРОЛЬ ДАННЫХ",
+                            10.5f,
+                            Color.rgb(187, 239, 228),
+                            Typeface.BOLD
                         )
-                    },
-                    matchWrap(top = 8)
+                    )
+                    addView(
+                        text(
+                            "Можно ли начинать разбор?",
+                            19f,
+                            Color.WHITE,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 2)
+                    )
+                },
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM
+                ).apply {
+                    leftMargin = dp(14)
+                    rightMargin = dp(14)
+                    bottomMargin = dp(11)
+                }
+            )
+        }
+    }
+
+    private fun sourceReadinessCheckRow(
+        check: SourceReadinessCheck
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                text(
+                    check.title.uppercase(Locale.getDefault()),
+                    10.5f,
+                    AppColors.muted,
+                    Typeface.BOLD
                 )
-                addView(
-                    outlineButton(
-                        if (activePackage != null) {
-                            if (apiFootballFeed?.fixtures?.isNotEmpty() == true) {
-                                "Вернуться к онлайн-каталогу"
-                            } else {
-                                "Вернуться к демо-каталогу"
-                            }
-                        } else {
-                            "Удалить истёкший Event Pack"
-                        },
-                        AppColors.muted,
-                        ::resetEventPackage
-                    ),
-                    matchWrap(top = 8)
-                )
+            )
+            addView(
+                text(
+                    check.value,
+                    15f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 3)
+            )
+            addView(
+                text(check.detail, 12.5f, AppColors.muted),
+                matchWrap(top = 2)
+            )
+        }
+    }
+
+    private fun sourceReadinessTechnicalDetails(
+        now: Long,
+        eventPackage: SportEventPackage?
+    ): String {
+        val activePackage = eventPackage?.takeUnless {
+            it.isExpired(now)
+        }
+        return when {
+            activePackage != null ->
+                "ЛОКАЛЬНЫЙ ПАКЕТ\n" +
+                    "Источник: ${activePackage.sourceLabel}\n" +
+                    "Событий: ${activePackage.events.size} • " +
+                    "действует до ${formatPackageDate(activePackage.validUntil)}\n" +
+                    "Контрольная метка: ${activePackage.shortFingerprint}\n" +
+                    "Доверие: ${packageTrustShort(activePackage)}"
+            activeCatalogOrigin == SportEventOrigin.API_SPORTS &&
+                apiFootballFeed != null -> {
+                val feed = checkNotNull(apiFootballFeed)
+                "ОНЛАЙН-РАСПИСАНИЕ\n" +
+                    "Событий: ${feed.fixtures.size}\n" +
+                    "Обновлено: ${formatPackageDate(feed.fetchedAt)}\n" +
+                    "Окно: ${feed.fromDate}–${feed.toDate}\n" +
+                    "Канал: HTTPS через сервер приложения"
             }
+            eventPackage != null ->
+                "ИСТЁКШИЙ ПАКЕТ\n" +
+                    "Источник: ${eventPackage.sourceLabel}\n" +
+                    "Истёк: ${formatPackageDate(eventPackage.validUntil)}\n" +
+                    "Контрольная метка: ${eventPackage.shortFingerprint}"
+            apiFootballFeed != null -> {
+                val feed = checkNotNull(apiFootballFeed)
+                "ПУСТОЕ ОНЛАЙН-ОКНО\n" +
+                    "Обновлено: ${formatPackageDate(feed.fetchedAt)}\n" +
+                    "Окно: ${feed.fromDate}–${feed.toDate}\n" +
+                    "Подходящих событий: 0"
+            }
+            apiFootballError != null ->
+                "ОНЛАЙН-ОБНОВЛЕНИЕ\n" +
+                    "Последняя попытка завершилась ошибкой.\n" +
+                    "Канал: HTTPS через сервер приложения"
+            else ->
+                "УЧЕБНЫЙ КАТАЛОГ\n" +
+                    "Событий: ${DemoCatalog.events.size}\n" +
+                    "Текущие матчи не подтверждены."
         }
     }
 
@@ -7145,7 +7245,7 @@ class MainActivity : Activity() {
                 now = now,
                 totalEventCount = visibleEvents.size
             ),
-            matchWrap(top = 8)
+            matchWrap(top = 6)
         )
         if (selection.hiddenCount > 0) {
             val nextPage = min(
@@ -7351,40 +7451,11 @@ class MainActivity : Activity() {
         }
         val apiActive =
             activeCatalogOrigin == SportEventOrigin.API_SPORTS
-        val tone = when {
-            activePackage != null ->
-                Tone(AppColors.signal, AppColors.signalSoft)
-            apiActive ->
-                Tone(AppColors.accentDark, AppColors.accentSoft)
-            apiFootballError != null ->
-                Tone(AppColors.warning, AppColors.warningSoft)
-            else -> Tone(AppColors.muted, AppColors.background)
-        }
-        val badge = when {
-            activePackage != null ->
-                "EVENT PACK • ${catalogEvents.size}"
-            apiActive -> "ОНЛАЙН • ${catalogEvents.size}"
-            apiFootballRefreshInProgress -> "ОБНОВЛЕНИЕ"
-            else -> "ДЕМО • ${catalogEvents.size}"
-        }
-        val title = when {
-            activePackage != null -> activePackage.sourceLabel
-            apiActive -> "Онлайн-расписание"
-            else -> "Демонстрационный каталог"
-        }
-        val body = when {
-            activePackage != null ->
-                "Действует до ${formatPackageDate(activePackage.validUntil)} • ${packageTrustShort(activePackage)}"
-            apiActive -> {
-                val feed = checkNotNull(apiFootballFeed)
-                "Обновлено ${formatPackageDate(feed.fetchedAt)} • окно ${feed.fromDate}–${feed.toDate}"
-            }
-            apiFootballRefreshInProgress ->
-                "Получаем расписание России и СНГ."
-            apiFootballError != null -> checkNotNull(apiFootballError)
-            else ->
-                "Проверьте даты и составы по официальным источникам."
-        }
+        val readiness = sourceReadiness(now)
+        val tone = sourceReadinessTone(readiness.level)
+        val badge = readiness.badge
+        val title = readiness.verdict
+        val body = readiness.summary
         val stackHeader =
             resources.configuration.fontScale >= 1.3f ||
                 resources.configuration.screenWidthDp < 380
@@ -7444,6 +7515,19 @@ class MainActivity : Activity() {
                 matchWrap(top = 9)
             )
             addView(text(body, 12.5f, AppColors.muted), matchWrap(top = 4))
+            addView(
+                text(
+                    "Источник: ${readiness.checks[0].value}\n" +
+                        "Свежесть: ${readiness.checks[1].value}",
+                    12f,
+                    tone.foreground,
+                    Typeface.BOLD
+                ).apply {
+                    background = rounded(tone.background, 8)
+                    setPadding(dp(11), dp(9), dp(11), dp(9))
+                },
+                matchWrap(top = 9)
+            )
             if (apiActive) {
                 apiFootballDelta?.takeIf {
                     it.changes.isNotEmpty()
@@ -7525,7 +7609,7 @@ class MainActivity : Activity() {
             }
             addView(
                 outlineButton(
-                    "Источник и импорт",
+                    "Проверить источник и свежесть",
                     AppColors.muted
                 ) {
                     selectFeedWorkspaceMode(
@@ -7830,32 +7914,68 @@ class MainActivity : Activity() {
     }
 
     private fun feedGettingStartedPanel(): LinearLayout {
+        val stack =
+            resources.configuration.fontScale >= 1.3f ||
+                resources.configuration.screenWidthDp < 380
         return card().apply {
+            orientation = if (stack) {
+                LinearLayout.VERTICAL
+            } else {
+                LinearLayout.HORIZONTAL
+            }
+            gravity = if (stack) {
+                Gravity.START
+            } else {
+                Gravity.CENTER_VERTICAL
+            }
             addView(
-                text("НАЧНИТЕ ЗДЕСЬ", 11f, AppColors.signal, Typeface.BOLD)
-            )
-            addView(
-                text(
-                    "1. Выберите событие\n" +
-                        "2. Прочитайте карту данных\n" +
-                        "3. Запишите факт и его источник\n" +
-                        "4. Зафиксируйте решение",
-                    15f,
-                    AppColors.ink,
-                    Typeface.BOLD
-                ).apply {
-                    setLineSpacing(dp(3).toFloat(), 1f)
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(
+                        text(
+                            "БЫСТРЫЙ СТАРТ",
+                            10.5f,
+                            AppColors.signal,
+                            Typeface.BOLD
+                        )
+                    )
+                    addView(
+                        text(
+                            "Событие → карта данных → факт → решение",
+                            13f,
+                            AppColors.ink,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 3)
+                    )
                 },
-                matchWrap(top = 7)
+                if (stack) {
+                    matchWrap()
+                } else {
+                    LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    ).apply {
+                        rightMargin = dp(12)
+                    }
+                }
             )
             addView(
                 outlineButton(
-                    "Показать обучение",
+                    "Обучение",
                     AppColors.signal
                 ) {
                     showProductTour()
                 },
-                matchWrap(top = 12)
+                if (stack) {
+                    matchWrap(top = 10)
+                } else {
+                    LinearLayout.LayoutParams(
+                        dp(132),
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                }
             )
         }
     }
@@ -9146,24 +9266,13 @@ class MainActivity : Activity() {
         section: PulseLabSection
     ) {
         if (section == activePulseLabSection) return
-        val navigatorScrollY = pulseLabNavigatorAnchor?.let {
-                navigator ->
-            navigator.requestRectangleOnScreen(
-                Rect(
-                    0,
-                    0,
-                    navigator.width,
-                    min(navigator.height, dp(220))
-                ),
-                true
-            )
-            mainScroll.scrollY
-        }
         activePulseLabSection = section
         pendingPulseFactor = null
         pendingPulseStoryAction = null
         renderContent()
-        navigatorScrollY?.let { mainScroll.scrollTo(0, it) }
+        pulseLabNavigatorAnchor?.let { navigator ->
+            scrollToAppView(navigator, topOffsetDp = 10)
+        }
     }
 
     private fun selectPulseWorkspaceMode(
@@ -25841,6 +25950,8 @@ class MainActivity : Activity() {
             "focus_event_limit"
         const val STATE_API_UPDATE_PULSE_EXPANDED =
             "api_update_pulse_expanded"
+        const val STATE_SOURCE_READINESS_DETAILS_EXPANDED =
+            "source_readiness_details_expanded"
         const val STATE_MARKET_LENS_KIND =
             "market_lens_kind"
         const val STATE_PULSE_WORKSPACE_MODE =

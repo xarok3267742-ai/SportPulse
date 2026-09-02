@@ -773,3 +773,22 @@ Avoid: marketing hero, sci-fi spaceship console, cyberpunk, excessive glow, dupl
 ```
 
 Generated with the built-in image generation tool from the Matchday briefing, Workspace depth and Age gate material references, optimized to a 1672 × 941 JPEG and saved as `app/src/main/res/drawable-nodpi/product_tour_route_v3110.jpg`. All five stations remain visible in the 104 dp standard header and its 72 dp large-text variant; stage names, progress and instructions remain native Android elements.
+
+## Source readiness
+
+```text
+Use case: productivity-visual
+Asset type: wide 16:9 Android feature header for the Sport Pulse data-readiness screen
+Input images: Image 1 is the visual style reference for transparent physical data modules and stadium context; Image 2 is the reference for a clear connected workflow; Image 3 is the reference for a decisive physical control gate.
+Primary request: Create a premium photorealistic sports-data control desk that instantly communicates a three-part readiness check before analysing a match.
+Scene/backdrop: a real sports operations desk overlooking a modern football stadium, with tactile graphite equipment rather than floating UI.
+Subject: exactly three distinct physical verification stations connected left to right by one thin teal signal line: first a transparent source capsule containing an abstract match feed, second a precise metal freshness clock/dial, third a solid decision boundary gate with a small amber indicator; after the third station the line ends, clearly showing that source data supports preparation but does not predict an outcome.
+Style/medium: high-end editorial product photography, realistic glass, matte metal, paper and subtle wear; visually consistent with the three reference images.
+Composition/framing: wide 16:9, all three stations centered and fully visible in the middle band, balanced spacing, clean darker lower-left area for native Android text overlay, crop-safe on all sides.
+Lighting/mood: crisp neutral stadium lighting, calm, rigorous and trustworthy.
+Color palette: balanced graphite, neutral white, natural field green, restrained teal, one small amber caution accent and one tiny coral-red stop detail; avoid monochrome blue or purple.
+Constraints: exactly three stations; no readable text, no letters, no numbers, no icons, no logos, no team crests, no bookmaker branding, no betting odds, no money, no betting slips, no casino imagery, no people, no hands, no phones, no watermark. The source capsule, clock/dial and boundary gate must be sharp and inspectable.
+Avoid: cyberpunk neon, floating holograms, gradients, bokeh blobs, dark unreadable center, clutter, duplicated modules, decorative card frame, pseudo-text.
+```
+
+Generated with the built-in image generation tool using `api_update_pulse.jpg`, `product_tour_route_v3110.jpg` and `decision_gate_v350.jpg` as material and workflow references. The selected output was optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/source_readiness_v3120.jpg`. Source, freshness and boundary remain distinct in the compact mobile crop; all status copy is native Android text.
