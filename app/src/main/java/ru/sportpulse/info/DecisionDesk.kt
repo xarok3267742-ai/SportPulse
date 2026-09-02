@@ -372,10 +372,28 @@ internal data class DecisionDeskProfile(
     val stopCount: Int,
     val observeCount: Int,
     val readyCount: Int,
-    val reviewedEvents: Int
+    val reviewedEvents: Int,
+    val linkedReviewCount: Int,
+    val calibrationMemory: CalibrationMemory
 ) {
     val visibleDecisionCount: Int
         get() = stopCount + observeCount + readyCount
+
+    val openCycleCount: Int
+        get() = (visibleDecisionCount - linkedReviewCount)
+            .coerceAtLeast(0)
+
+    val reviewCoveragePercent: Int
+        get() = if (visibleDecisionCount == 0) {
+            0
+        } else {
+            (
+                (
+                    linkedReviewCount * 100L +
+                        visibleDecisionCount / 2
+                    ) / visibleDecisionCount
+                ).toInt()
+        }
 
     val cautiousShare: Int
         get() = if (visibleDecisionCount == 0) {
@@ -390,9 +408,14 @@ internal data class DecisionDeskProfile(
 internal object DecisionDeskProfileEngine {
     fun create(
         ledger: DecisionLedger,
-        reviewedEvents: Int
+        calibrationRecords: List<CalibrationRecord>
     ): DecisionDeskProfile {
-        require(reviewedEvents >= 0)
+        val calibrationMemory = CalibrationMemoryEngine.evaluate(
+            calibrationRecords
+        )
+        val reviewedFingerprints = calibrationRecords
+            .map { it.snapshot.fingerprint.lowercase() }
+            .toSet()
         return DecisionDeskProfile(
             totalDecisions = ledger.totalRecordCount,
             stopCount = ledger.records.count {
@@ -404,7 +427,12 @@ internal object DecisionDeskProfileEngine {
             readyCount = ledger.records.count {
                 it.decision == SavedDecision.DATA_READY
             },
-            reviewedEvents = reviewedEvents
+            reviewedEvents = calibrationMemory.reviewCount,
+            linkedReviewCount = ledger.records.count {
+                it.snapshotFingerprint.lowercase() in
+                    reviewedFingerprints
+            },
+            calibrationMemory = calibrationMemory
         )
     }
 }

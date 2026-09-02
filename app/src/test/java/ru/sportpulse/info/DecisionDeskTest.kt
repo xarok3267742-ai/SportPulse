@@ -94,12 +94,12 @@ class DecisionDeskTest {
     @Test
     fun profileCountsVisibleLedgerWindow() {
         var ledger = DecisionLedgerFactory.empty()
-        listOf(
+        val snapshots = listOf(
             SavedDecision.SKIP,
             SavedDecision.OBSERVE,
             SavedDecision.DATA_READY
-        ).forEachIndexed { index, decision ->
-            val snapshot = DecisionSnapshotFactory.create(
+        ).mapIndexed { index, decision ->
+            DecisionSnapshotFactory.create(
                 eventId = "event-$index",
                 decision = decision,
                 savedAt = now + index,
@@ -108,6 +108,88 @@ class DecisionDeskTest {
                 timeline = EvidenceTimeline(List(5) { now }),
                 counterReview = CounterReviewAssessment.cleared()
             )
+        }
+        snapshots.forEach { snapshot ->
+            ledger = DecisionLedgerFactory.append(
+                ledger = ledger,
+                snapshot = snapshot,
+                eventLabel = "Матч ${snapshot.eventId}"
+            )
+        }
+
+        val profile = DecisionDeskProfileEngine.create(
+            ledger = ledger,
+            calibrationRecords = snapshots.take(2).map(
+                ::calibrationRecord
+            )
+        )
+
+        assertEquals(3L, profile.totalDecisions)
+        assertEquals(1, profile.stopCount)
+        assertEquals(1, profile.observeCount)
+        assertEquals(1, profile.readyCount)
+        assertEquals(66, profile.cautiousShare)
+        assertEquals(2, profile.reviewedEvents)
+        assertEquals(2, profile.linkedReviewCount)
+        assertEquals(1, profile.openCycleCount)
+        assertEquals(67, profile.reviewCoveragePercent)
+        assertEquals(2, profile.calibrationMemory.reviewCount)
+    }
+
+    @Test
+    fun profileLinksReviewToExactDecisionSnapshot() {
+        val original = DecisionSnapshotFactory.create(
+            eventId = "same-event",
+            decision = SavedDecision.OBSERVE,
+            savedAt = now,
+            assessment = assessment(),
+            evidence = quorumEvidence(),
+            timeline = EvidenceTimeline(List(5) { now }),
+            counterReview = CounterReviewAssessment.cleared()
+        )
+        val revised = DecisionSnapshotFactory.create(
+            eventId = original.eventId,
+            decision = SavedDecision.SKIP,
+            savedAt = now + 1L,
+            assessment = assessment(),
+            evidence = quorumEvidence(),
+            timeline = EvidenceTimeline(List(5) { now + 1L }),
+            counterReview = CounterReviewAssessment.cleared()
+        )
+        val ledger = DecisionLedgerFactory.append(
+            ledger = DecisionLedgerFactory.empty(),
+            snapshot = original,
+            eventLabel = "Матч"
+        )
+
+        val profile = DecisionDeskProfileEngine.create(
+            ledger = ledger,
+            calibrationRecords = listOf(
+                calibrationRecord(revised)
+            )
+        )
+
+        assertEquals(1, profile.reviewedEvents)
+        assertEquals(0, profile.linkedReviewCount)
+        assertEquals(1, profile.openCycleCount)
+        assertEquals(0, profile.reviewCoveragePercent)
+    }
+
+    @Test
+    fun profileCoverageUsesOnlyAccessibleLedgerWindow() {
+        var ledger = DecisionLedgerFactory.empty()
+        var droppedSnapshot: DecisionSnapshot? = null
+        repeat(DecisionLedgerFactory.MAX_RECORDS + 1) { index ->
+            val snapshot = DecisionSnapshotFactory.create(
+                eventId = "rotating-event-$index",
+                decision = SavedDecision.SKIP,
+                savedAt = now + index,
+                assessment = assessment(),
+                evidence = quorumEvidence(),
+                timeline = EvidenceTimeline(List(5) { now }),
+                counterReview = CounterReviewAssessment.cleared()
+            )
+            if (index == 0) droppedSnapshot = snapshot
             ledger = DecisionLedgerFactory.append(
                 ledger = ledger,
                 snapshot = snapshot,
@@ -117,15 +199,17 @@ class DecisionDeskTest {
 
         val profile = DecisionDeskProfileEngine.create(
             ledger = ledger,
-            reviewedEvents = 2
+            calibrationRecords = listOf(
+                calibrationRecord(requireNotNull(droppedSnapshot))
+            )
         )
 
-        assertEquals(3L, profile.totalDecisions)
-        assertEquals(1, profile.stopCount)
-        assertEquals(1, profile.observeCount)
-        assertEquals(1, profile.readyCount)
-        assertEquals(66, profile.cautiousShare)
-        assertEquals(2, profile.reviewedEvents)
+        assertEquals(51L, profile.totalDecisions)
+        assertEquals(50, profile.visibleDecisionCount)
+        assertEquals(1, profile.reviewedEvents)
+        assertEquals(0, profile.linkedReviewCount)
+        assertEquals(50, profile.openCycleCount)
+        assertEquals(0, profile.reviewCoveragePercent)
     }
 
     private fun evaluate(
@@ -175,5 +259,29 @@ class DecisionDeskTest {
         return EvidenceAssessment(
             List(5) { EvidenceLevel.QUORUM }
         )
+    }
+
+    private fun calibrationRecord(
+        snapshot: DecisionSnapshot
+    ): CalibrationRecord {
+        var review = PostEventReviewFactory.start(
+            snapshot = snapshot,
+            now = snapshot.savedAt + 1L
+        )
+        SignalFactor.values().forEach { factor ->
+            review = PostEventReviewFactory.setOutcome(
+                review = review,
+                snapshot = snapshot,
+                factor = factor,
+                outcome = PostEventOutcome.CONFIRMED,
+                now = review.updatedAt + 1L
+            )
+        }
+        review = PostEventReviewFactory.finalize(
+            review = review,
+            snapshot = snapshot,
+            now = review.updatedAt + 1L
+        )
+        return CalibrationRecord(snapshot, review)
     }
 }

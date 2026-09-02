@@ -12092,31 +12092,23 @@ class MainActivity : Activity() {
         val profile = ledger?.let {
             DecisionDeskProfileEngine.create(
                 ledger = it,
-                reviewedEvents = state.calibrationRecords().size
+                calibrationRecords = state.calibrationRecords()
             )
         }
-        return card().apply {
-            addView(
-                text(
-                    "Профиль процесса",
-                    22f,
-                    AppColors.ink,
-                    Typeface.BOLD
-                )
-            )
-            addView(
-                text(
-                    "Оценивает дисциплину проверки, а не доходность и не точность угадывания исходов.",
-                    13f,
-                    AppColors.muted
-                ),
-                matchWrap(top = 5)
-            )
+        return card(padding = 12).apply {
             if (
                 read.integrity ==
                 DecisionLedgerIntegrity.TAMPERED ||
                 profile == null
             ) {
+                addView(
+                    text(
+                        "Профиль проверки",
+                        22f,
+                        AppColors.ink,
+                        Typeface.BOLD
+                    )
+                )
                 addView(
                     text(
                         "Журнал недоступен: локальная цепочка не прошла проверку целостности.",
@@ -12139,54 +12131,81 @@ class MainActivity : Activity() {
                 )
                 return@apply
             }
-            val stack =
-                resources.configuration.screenWidthDp < 380 ||
-                    effectiveFontScale() >= 1.3f
+
+            val tone = if (profile.reviewedEvents == 0) {
+                Tone(AppColors.signal, AppColors.signalSoft)
+            } else {
+                calibrationMemoryTone(
+                    profile.calibrationMemory.status
+                )
+            }
             addView(
-                LinearLayout(this@MainActivity).apply {
-                    orientation = if (stack) {
-                        LinearLayout.VERTICAL
-                    } else {
-                        LinearLayout.HORIZONTAL
-                    }
-                    addView(
-                        decisionDeskProfileMetric(
-                            value = profile.totalDecisions.toString(),
-                            title = "решений в журнале",
-                            color = AppColors.signal
-                        ),
-                        if (stack) {
-                            matchWrap()
-                        } else {
-                            LinearLayout.LayoutParams(
-                                0,
-                                LinearLayout.LayoutParams.WRAP_CONTENT,
-                                1f
-                            ).apply { rightMargin = dp(7) }
-                        }
-                    )
-                    addView(
-                        decisionDeskProfileMetric(
-                            value = profile.reviewedEvents.toString(),
-                            title = "разборов после матча",
-                            color = AppColors.accentDark
-                        ),
-                        if (stack) {
-                            matchWrap(top = 7)
-                        } else {
-                            LinearLayout.LayoutParams(
-                                0,
-                                LinearLayout.LayoutParams.WRAP_CONTENT,
-                                1f
-                            )
-                        }
-                    )
-                },
+                decisionDeskProfileHero(profile, tone),
+                matchFixed(
+                    if (effectiveFontScale() >= 1.8f) 176 else 144
+                )
+            )
+            addView(
+                text(
+                    "Профиль проверки",
+                    22f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                ),
                 matchWrap(top = 14)
             )
             addView(
                 text(
-                    "ПОСЛЕДНИЕ ${profile.visibleDecisionCount}",
+                    "Показывает, замыкаете ли вы цикл до и после матча и какой навык проверки взять следующим. Доходность, коэффициенты и угаданные исходы не считаются.",
+                    13f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 5)
+            )
+            addView(
+                text(
+                    "ЦИКЛ РЕШЕНИЯ",
+                    11f,
+                    AppColors.muted,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 16)
+            )
+            addView(
+                decisionDeskProfileCycle(profile),
+                matchWrap(top = 7)
+            )
+            if (profile.visibleDecisionCount > 0) {
+                addView(
+                    text(
+                        "Замкнут цикл • ${profile.reviewCoveragePercent}%",
+                        12.5f,
+                        AppColors.ink,
+                        Typeface.BOLD
+                    ),
+                    matchWrap(top = 10)
+                )
+                addView(
+                    horizontalProgress().apply {
+                        max = profile.visibleDecisionCount
+                        progress = profile.linkedReviewCount
+                        progressTintList =
+                            ColorStateList.valueOf(tone.foreground)
+                    },
+                    matchFixed(7, top = 5)
+                )
+                addView(
+                    text(
+                        "Связано с завершённым разбором того же снимка: ${profile.linkedReviewCount} из ${profile.visibleDecisionCount} решений в доступном окне.",
+                        11.5f,
+                        AppColors.muted
+                    ),
+                    matchWrap(top = 5)
+                )
+            }
+            addView(
+                text(
+                    "СТАТУСЫ В ДОСТУПНОМ ОКНЕ • ${profile.visibleDecisionCount}",
                     11f,
                     AppColors.muted,
                     Typeface.BOLD
@@ -12220,57 +12239,201 @@ class MainActivity : Activity() {
                 ),
                 matchWrap(top = 9)
             )
-            val insight = when {
-                profile.visibleDecisionCount == 0 ->
-                    "Профиль появится после первого предстартового решения."
-                profile.cautiousShare >= 60 ->
-                    "Вы чаще оставляете идею на уровне «Стоп» или «Наблюдать». Это показывает осторожность процесса, но качество видно только после ретроспектив."
-                else ->
-                    "Вы часто доходите до статуса «Факты готовы». Проверьте в ретроспективах, не пропускаете ли сильные контраргументы."
-            }
             addView(
-                text(
-                    insight,
-                    13f,
-                    AppColors.ink,
-                    Typeface.BOLD
-                ).apply {
-                    background = rounded(
-                        AppColors.signalSoft,
-                        7
-                    )
-                    setPadding(
-                        dp(12),
-                        dp(11),
-                        dp(12),
-                        dp(11)
-                    )
-                },
+                decisionDeskProfileInsight(profile, tone),
                 matchWrap(top = 15)
             )
             addView(
-                outlineButton(
-                    "Открыть историю решений",
+                commandButton(
+                    if (profile.totalDecisions == 0L) {
+                        "Собрать первое решение"
+                    } else {
+                        "Добавить разбор после матча"
+                    },
                     AppColors.signal
                 ) {
-                    activeDecisionDeskSection =
-                        DecisionDeskSection.HISTORY
-                    renderContent()
+                    if (profile.totalDecisions == 0L) {
+                        activeDecisionDeskSection =
+                            DecisionDeskSection.DECISION
+                        renderContent()
+                    } else {
+                        selectTab(1)
+                    }
                 },
                 matchWrap(top = 12)
+            )
+            addView(
+                outlineButton(
+                    if (profile.totalDecisions == 0L) {
+                        "Открыть гайд"
+                    } else {
+                        "Открыть историю решений"
+                    },
+                    AppColors.signal
+                ) {
+                    if (profile.totalDecisions == 0L) {
+                        selectTab(3)
+                    } else {
+                        activeDecisionDeskSection =
+                            DecisionDeskSection.HISTORY
+                        renderContent()
+                    }
+                },
+                matchWrap(top = 8)
             )
         }
     }
 
-    private fun decisionDeskProfileMetric(
+    private fun decisionDeskProfileHero(
+        profile: DecisionDeskProfile,
+        tone: Tone
+    ): FrameLayout {
+        return imageFrame().apply {
+            addView(
+                ImageView(this@MainActivity).apply {
+                    setImageResource(
+                        R.drawable.process_profile_cycle_v3140
+                    )
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    contentDescription =
+                        "Цикл дисциплины: решение до матча, проверка после матча и корректировка следующего подхода"
+                },
+                frameMatch()
+            )
+            addView(
+                View(this@MainActivity).apply {
+                    background = gradientScrim(compact = true)
+                },
+                frameMatch()
+            )
+            addView(
+                label(
+                    decisionDeskProfileBadge(profile),
+                    tone.foreground,
+                    Color.WHITE
+                ),
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.TOP or Gravity.START
+                ).apply {
+                    leftMargin = dp(12)
+                    topMargin = dp(12)
+                }
+            )
+            addView(
+                text(
+                    "Решение → разбор → следующий навык",
+                    19f,
+                    Color.WHITE,
+                    Typeface.BOLD
+                ).apply {
+                    maxLines = 2
+                    setTextSize(
+                        TypedValue.COMPLEX_UNIT_PX,
+                        19f *
+                            resources.displayMetrics.density *
+                            min(effectiveFontScale(), 1.35f)
+                    )
+                },
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM
+                ).apply {
+                    leftMargin = dp(12)
+                    rightMargin = dp(12)
+                    bottomMargin = dp(11)
+                }
+            )
+        }
+    }
+
+    private fun decisionDeskProfileBadge(
+        profile: DecisionDeskProfile
+    ): String {
+        if (profile.totalDecisions == 0L) return "СТАРТ"
+        if (profile.reviewedEvents == 0) return "НУЖЕН РАЗБОР"
+        return when (profile.calibrationMemory.status) {
+            CalibrationMemoryStatus.LEARNING ->
+                "БАЗА • ${profile.reviewedEvents.coerceAtMost(3)}/3"
+            CalibrationMemoryStatus.STABLE -> "УСТОЙЧИВО"
+            CalibrationMemoryStatus.UNEVEN -> "НУЖЕН ФОКУС"
+            CalibrationMemoryStatus.BLIND_SPOT -> "СЛЕПАЯ ЗОНА"
+        }
+    }
+
+    private fun decisionDeskProfileCycle(
+        profile: DecisionDeskProfile
+    ): LinearLayout {
+        val stack =
+            resources.configuration.screenWidthDp < 380 ||
+                effectiveFontScale() >= 1.3f
+        val metrics = listOf(
+            Triple(
+                profile.visibleDecisionCount.toString(),
+                "До матча",
+                "решений в окне"
+            ),
+            Triple(
+                profile.linkedReviewCount.toString(),
+                "После матча",
+                "связанных разборов"
+            ),
+            Triple(
+                "${profile.reviewCoveragePercent}%",
+                "Связь",
+                if (profile.visibleDecisionCount == 0) {
+                    "появится после записи"
+                } else {
+                    "цикла замкнуто"
+                }
+            )
+        )
+        return LinearLayout(this).apply {
+            orientation = if (stack) {
+                LinearLayout.VERTICAL
+            } else {
+                LinearLayout.HORIZONTAL
+            }
+            background = rounded(AppColors.background, 7)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            metrics.forEachIndexed { index, metric ->
+                addView(
+                    decisionDeskProfileCycleMetric(
+                        value = metric.first,
+                        title = metric.second,
+                        caption = metric.third,
+                        color = when (index) {
+                            0 -> AppColors.signal
+                            1 -> AppColors.accentDark
+                            else -> AppColors.ink
+                        }
+                    ),
+                    if (stack) {
+                        matchWrap(top = if (index == 0) 0 else 10)
+                    } else {
+                        LinearLayout.LayoutParams(
+                            0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1f
+                        ).apply {
+                            if (index > 0) leftMargin = dp(8)
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    private fun decisionDeskProfileCycleMetric(
         value: String,
         title: String,
+        caption: String,
         color: Int
     ): LinearLayout {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = rounded(AppColors.background, 6)
-            setPadding(dp(12), dp(11), dp(12), dp(11))
             addView(
                 text(
                     value,
@@ -12287,6 +12450,70 @@ class MainActivity : Activity() {
                     Typeface.BOLD
                 ),
                 matchWrap(top = 1)
+            )
+            addView(
+                text(
+                    caption,
+                    11f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 1)
+            )
+        }
+    }
+
+    private fun decisionDeskProfileInsight(
+        profile: DecisionDeskProfile,
+        tone: Tone
+    ): LinearLayout {
+        val memory = profile.calibrationMemory
+        val message = when {
+            profile.totalDecisions == 0L ->
+                "Сначала зафиксируйте одно решение до матча: ожидание, возможное опровержение и условие отказа."
+            profile.reviewedEvents == 0 ->
+                "Вернитесь после завершившегося матча и разберите те же пять факторов. Только так решение превращается в опыт."
+            profile.reviewCoveragePercent < 50 ->
+                "Закройте ещё ${profile.openCycleCount} незавершённых циклов в текущем окне. Сравнивайте разбор с исходным снимком, а не с памятью о нём."
+            memory.status == CalibrationMemoryStatus.LEARNING -> {
+                val remaining = (3 - memory.reviewCount)
+                    .coerceAtLeast(0)
+                if (remaining > 0) {
+                    "Завершите ещё $remaining ${calibrationReviewWord(remaining)}: после трёх разборов профиль сможет показать повторяющийся слабый фактор."
+                } else {
+                    "Заполняйте все пять факторов после матча: данных пока недостаточно, чтобы назвать устойчивую слепую зону."
+                }
+            }
+            memory.status == CalibrationMemoryStatus.STABLE ->
+                "Процесс устойчив на доступной серии. Сохраняйте тот же порядок и проверяйте, не появляется ли новый слабый фактор."
+            else -> {
+                val focus = memory.focusProfile
+                if (focus == null) {
+                    "В следующем разборе заполните все пять факторов и отдельно отметьте критический промах."
+                } else {
+                    "Перепроверьте фактор «${focus.factor.title}»: заранее запишите источник, альтернативное объяснение и условие отказа."
+                }
+            }
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(tone.background, 7)
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+            addView(
+                text(
+                    "СЛЕДУЮЩИЙ НАВЫК",
+                    10.5f,
+                    tone.foreground,
+                    Typeface.BOLD
+                )
+            )
+            addView(
+                text(
+                    message,
+                    13f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 4)
             )
         }
     }

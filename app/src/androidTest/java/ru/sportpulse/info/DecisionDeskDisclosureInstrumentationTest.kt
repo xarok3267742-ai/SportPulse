@@ -104,6 +104,67 @@ class DecisionDeskDisclosureInstrumentationTest {
         assertTextAbsent("Рабочая форма")
     }
 
+    @Test
+    fun profileShowsOnlyExactlyLinkedReviewCoverage() {
+        scenario.onActivity { activity ->
+            val store = UserStateStore(activity)
+            val now = System.currentTimeMillis()
+            val first = store.saveDecision(
+                eventId = "profile-event-1",
+                eventLabel = "Первый матч",
+                decision = SavedDecision.SKIP,
+                assessment = SignalAssessment(List(5) { 70 }),
+                evidence = EvidenceAssessment(
+                    List(5) { EvidenceLevel.SINGLE_SOURCE }
+                ),
+                timeline = EvidenceTimeline(List(5) { now }),
+                counterReview = CounterReviewAssessment.unchecked(),
+                savedAt = now
+            )
+            var review = PostEventReviewFactory.start(
+                snapshot = first,
+                now = now + 1L
+            )
+            SignalFactor.values().forEach { factor ->
+                review = PostEventReviewFactory.setOutcome(
+                    review = review,
+                    snapshot = first,
+                    factor = factor,
+                    outcome = PostEventOutcome.CONFIRMED,
+                    now = review.updatedAt + 1L
+                )
+            }
+            review = PostEventReviewFactory.finalize(
+                review = review,
+                snapshot = first,
+                now = review.updatedAt + 1L
+            )
+            store.savePostEventReview(review)
+            store.saveDecision(
+                eventId = "profile-event-2",
+                eventLabel = "Второй матч",
+                decision = SavedDecision.SKIP,
+                assessment = SignalAssessment(List(5) { 65 }),
+                evidence = EvidenceAssessment(
+                    List(5) { EvidenceLevel.SINGLE_SOURCE }
+                ),
+                timeline = EvidenceTimeline(List(5) { now + 10L }),
+                counterReview = CounterReviewAssessment.unchecked(),
+                savedAt = now + 10L
+            )
+        }
+        scenario.recreate()
+        instrumentation.waitForIdleSync()
+
+        clickText("Штаб")
+        clickContentDescription("Штаб: Профиль")
+
+        assertTextPresent("Замкнут цикл • 50%")
+        assertTextPresent("Связано с завершённым разбором того же снимка: 1 из 2 решений в доступном окне.")
+        assertTextPresent("Добавить разбор после матча")
+        assertContentDescriptionStartingWith("Цикл дисциплины")
+    }
+
     private fun assertEventuallyFocusedInput() {
         val deadline = SystemClock.uptimeMillis() + 2_000L
         var focused = false
@@ -149,6 +210,22 @@ class DecisionDeskDisclosureInstrumentationTest {
         instrumentation.waitForIdleSync()
     }
 
+    private fun clickContentDescription(description: String) {
+        scenario.onActivity { activity ->
+            descendants(activity.window.decorView)
+                .firstOrNull {
+                    it.contentDescription?.toString() == description &&
+                        it.isClickable
+                }
+                ?.performClick()
+                ?: error(
+                    "Clickable content description not found: " +
+                        description
+                )
+        }
+        instrumentation.waitForIdleSync()
+    }
+
     private fun assertTextPresent(title: String) {
         scenario.onActivity { activity ->
             assertTrue(
@@ -167,6 +244,20 @@ class DecisionDeskDisclosureInstrumentationTest {
                 descendants(activity.window.decorView)
                     .filterIsInstance<TextView>()
                     .none { it.text.toString() == title }
+            )
+        }
+    }
+
+    private fun assertContentDescriptionStartingWith(
+        prefix: String
+    ) {
+        scenario.onActivity { activity ->
+            assertTrue(
+                "Content description not found: $prefix",
+                descendants(activity.window.decorView).any {
+                    it.contentDescription?.toString()
+                        ?.startsWith(prefix) == true
+                }
             )
         }
     }

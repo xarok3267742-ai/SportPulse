@@ -813,3 +813,24 @@ Avoid: cyberpunk neon, floating holograms, decorative charts, gradient backgroun
 ```
 
 Generated with the built-in image generation tool using `decision_gate_v350.jpg` and `scenario_fork.jpg` as material and workflow references. The selected output was optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/decision_preflight_v3130.jpg`. The three physical stations remain distinct after the compact mobile crop; all status, progress and action copy is native Android text.
+
+## Process profile cycle
+
+```text
+Use case: productivity-visual
+Asset type: compact wide 16:9 image header for the Process Profile screen in the Sport Pulse Android sports-analysis application
+Primary request: create an original, immediately readable physical learning loop showing that a disciplined sports decision becomes useful only when it is reviewed after the event and changes the next checking habit; this is process analytics, never betting performance or outcome prediction
+Input images: Image 1 is the reference for the product's sealed graphite decision modules, cyan chain language, realistic stadium operations setting, and premium editorial photography. Image 2 is the reference for the product's transparent evidence paths and restrained amber/red exception signals. Image 3 is the reference for tactile preflight hardware and the idea-to-falsification material language. Preserve the material and lighting family without copying any composition.
+Scene/backdrop: top-down sports operations bench overlooking a real multi-sport venue, with a narrow sharp glimpse of football pitch, basketball court, and ice rink only at the far upper edge
+Subject: exactly three distinct tactile stations arranged left to right and fully visible: first one sealed graphite decision capsule with a cyan latch, second one transparent post-event inspection lens over a single blank evidence strip, third one precise mechanical calibration dial with three concentric metal rings; one continuous thin cyan rail connects station one to station two to station three, then makes one clean restrained return path underneath back toward station one to communicate a closed learning cycle; place one tiny amber caution marker beside the inspection lens and one tiny red interruption notch on the return path
+Narrative: record before the event, review evidence after the event, adjust the next checking habit; the return path must end before entering the first capsule so the scene remains legible and not an infinite glowing loop
+Style/medium: premium photorealistic editorial product photography, realistic industrial design, quiet professional sports newsroom aesthetic
+Composition/framing: wide 16:9; all three stations centered in one horizontal middle band, equally legible and separated, crop-safe for a mobile header near 3:1; keep the lower-left and lower-center darker and low-detail for native white Android text; preserve station silhouettes in a center crop
+Lighting/mood: crisp neutral stadium spill, calm, reflective, rigorous, trustworthy, non-promotional
+Color palette: balanced charcoal graphite, brushed neutral metal, clear glass, natural field green, restrained cyan, one tiny amber accent and one tiny safety-red notch; no purple, no orange dominance, no monochrome blue
+Materials/textures: matte anodized metal, optical glass, clear polycarbonate, fine blank paper fiber, precise mechanical dial, subtle realistic wear
+Constraints: exactly three stations, exactly one outbound cyan rail and one clean return path, exactly one amber marker, exactly one red notch; no readable text, no letters, no numbers, no icons, no logos, no team crests, no scores, no odds, no percentages, no money, no betting slips, no casino objects, no charts, no floating UI, no people, no hands, no phone, no watermark; primary hardware sharp and inspectable
+Avoid: cyberpunk neon, glowing infinity symbol, holograms, decorative dashboard, gradient background, bokeh blobs, marketing hero, trophy, celebration, reward imagery, duplicated modules, clutter, pseudo-text, dark unreadable hardware, blurred primary subject
+```
+
+Generated with the built-in image generation tool using `decision_ledger.jpg`, `collection_xray.jpg` and `decision_preflight_v3130.jpg` as material and process references. The selected output was optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/process_profile_cycle_v3140.jpg`. The decision capsule, post-event inspection lens, calibration dial and return path remain distinct in the compact crop; all metrics and status copy remain native Android elements.
