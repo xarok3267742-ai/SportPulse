@@ -22,7 +22,7 @@ class DecisionDeskTest {
             listOf(DecisionDeskField.THESIS),
             result.missingFields
         )
-        assertEquals("Сформулировать тезис", result.actionTitle)
+        assertEquals("Записать идею матча", result.actionTitle)
     }
 
     @Test

@@ -57,7 +57,7 @@ class ScenarioForkFlowInstrumentationTest {
             descendants(activity.window.decorView)
                 .filterIsInstance<TextView>()
                 .first {
-                    it.text.toString() == "Сформулировать тезис" &&
+                    it.text.toString() == "Записать идею матча" &&
                         it.isClickable
                 }
                 .performClick()
@@ -70,7 +70,7 @@ class ScenarioForkFlowInstrumentationTest {
         )
         assertForkFocuses(
             contentDescriptionPrefix = "Сценарий B:",
-            hintPrefix = "Что сильнее"
+            hintPrefix = "Какой факт"
         )
         assertForkFocuses(
             contentDescriptionPrefix = "Стоп-линия:",

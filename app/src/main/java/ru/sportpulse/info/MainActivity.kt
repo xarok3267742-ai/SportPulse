@@ -1069,7 +1069,7 @@ class MainActivity : Activity() {
         startAttentionTrackingIfNeeded()
         if (scrollToContent) {
             mainScroll.post {
-                mainScroll.smoothScrollTo(0, (content.top - dp(12)).coerceAtLeast(0))
+                mainScroll.smoothScrollTo(0, content.top.coerceAtLeast(0))
             }
         }
     }
@@ -7204,7 +7204,7 @@ class MainActivity : Activity() {
         mainScroll.post {
             mainScroll.smoothScrollTo(
                 0,
-                (content.top - dp(12)).coerceAtLeast(0)
+                content.top.coerceAtLeast(0)
             )
         }
     }
@@ -9295,7 +9295,7 @@ class MainActivity : Activity() {
             scrollToAppView(target, topOffsetDp = 10)
         } ?: mainScroll.scrollTo(
             0,
-            (content.top - dp(12)).coerceAtLeast(0)
+            content.top.coerceAtLeast(0)
         )
     }
 
@@ -11201,10 +11201,11 @@ class MainActivity : Activity() {
                     addView(
                         ImageView(this@MainActivity).apply {
                             setImageResource(
-                                R.drawable.decision_gate_v350
+                                R.drawable.decision_preflight_v3130
                             )
                             scaleType = ImageView.ScaleType.CENTER_CROP
-                            contentDescription = null
+                            contentDescription =
+                                "Три шага проверки: идея матча, возможное опровержение и условие отказа"
                         },
                         frameMatch()
                     )
@@ -11233,7 +11234,7 @@ class MainActivity : Activity() {
                     )
                     addView(
                         label(
-                            "ЗАМЫСЕЛ • $completedFields/3",
+                            "ВОПРОСЫ • $completedFields/3",
                             Color.argb(215, 13, 30, 33),
                             Color.WHITE,
                             Color.argb(110, 255, 255, 255)
@@ -11284,31 +11285,15 @@ class MainActivity : Activity() {
                 matchWrap(top = 9)
             )
             addView(
-                LinearLayout(this@MainActivity).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    addView(
-                        text(
-                            "СЕЙЧАС",
-                            10.5f,
-                            AppColors.signal,
-                            Typeface.BOLD
-                        ),
-                        wrapWrap(right = 10)
-                    )
-                    addView(
-                        text(
-                            result.actionTitle,
-                            14f,
-                            AppColors.ink,
-                            Typeface.BOLD
-                        ),
-                        LinearLayout.LayoutParams(
-                            0,
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            1f
-                        )
-                    )
+                text(
+                    "1. Что ожидаете?  2. Что может опровергнуть?  " +
+                        "3. Когда отказаться?",
+                    12.5f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                ).apply {
+                    background = rounded(AppColors.background, 7)
+                    setPadding(dp(11), dp(9), dp(11), dp(9))
                 },
                 matchWrap(top = 9)
             )
@@ -11497,7 +11482,7 @@ class MainActivity : Activity() {
         )
         panel.addView(
             text(
-                "Три проверяемых поля. Сохранение обновит табло и карту данных, но не создаст прогноз.",
+                "Ответьте на три вопроса. Сохранение обновит карту данных, но не создаст прогноз.",
                 13.5f,
                 AppColors.muted
             ),
@@ -11646,12 +11631,12 @@ class MainActivity : Activity() {
 
         thesisInput = decisionDeskInput(
             value = draft.thesis,
-            hint = "Например: темп хозяев сохранится после перерыва",
+            hint = "Например: хозяева сохранят высокий темп после перерыва",
             maxLength = DecisionDeskDraft.MAX_THESIS_LENGTH
         )
         counterargumentInput = decisionDeskInput(
             value = draft.counterargument,
-            hint = "Что сильнее всего может опровергнуть тезис?",
+            hint = "Какой факт сильнее всего опровергнет эту идею?",
             maxLength =
                 DecisionDeskDraft.MAX_COUNTERARGUMENT_LENGTH
         )
@@ -11663,21 +11648,21 @@ class MainActivity : Activity() {
         )
         panel.addView(
             decisionDeskInputBlock(
-                title = "Тезис",
+                title = "1. Что ожидаете от матча?",
                 input = thesisInput
             ),
             matchWrap(top = 16)
         )
         panel.addView(
             decisionDeskInputBlock(
-                title = "Сильный контраргумент",
+                title = "2. Что может это опровергнуть?",
                 input = counterargumentInput
             ),
             matchWrap(top = 11)
         )
         panel.addView(
             decisionDeskInputBlock(
-                title = "Условие отмены",
+                title = "3. При каком факте откажетесь?",
                 input = stopConditionInput
             ),
             matchWrap(top = 11)
@@ -11720,7 +11705,7 @@ class MainActivity : Activity() {
         if (state.decisionDeskDraft(event.id) != null) {
             panel.addView(
                 text(
-                    "Замысел ${draft.shortFingerprint} • хранится только на устройстве.",
+                    "План ${draft.shortFingerprint} • хранится только на устройстве.",
                     11.5f,
                     AppColors.muted
                 ),
@@ -12356,9 +12341,9 @@ class MainActivity : Activity() {
     private fun decisionDeskGuidePanel(): LinearLayout {
         val steps = listOf(
             "Выберите тип проверки",
-            "Сформулируйте тезис",
-            "Постройте альтернативу в Развилке матча",
-            "Проведите наблюдаемую стоп-линию",
+            "Запишите, что ожидаете от матча",
+            "Укажите факт, который может это опровергнуть",
+            "Задайте наблюдаемое условие отказа",
             "Проверьте пять факторов и зафиксируйте статус"
         )
         return LinearLayout(this).apply {
@@ -12519,7 +12504,7 @@ class MainActivity : Activity() {
         }
         return when (result.status) {
             DecisionDeskStatus.STOP ->
-                "Не пройдена независимая проверка тезиса."
+                "Исходная идея не прошла независимую проверку."
             DecisionDeskStatus.OBSERVE ->
                 "Нужно разрешить спор между фактами."
             DecisionDeskStatus.FACTS_READY ->
@@ -12602,7 +12587,7 @@ class MainActivity : Activity() {
         content.addView(
             sectionTitle(
                 "Штаб решения",
-                "Тезис, контраргумент, стоп-условие. Один проверяемый шаг."
+                "Идея, возражение, условие отказа. Один проверяемый шаг."
             )
         )
 
@@ -14353,59 +14338,8 @@ class MainActivity : Activity() {
         val compactChangeAction =
             effectiveFontScale() >= 1.3f ||
                 resources.configuration.screenWidthDp < 380
-        val eventDetails = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(
-                text(
-                    event.match,
-                    23f,
-                    Color.WHITE,
-                    Typeface.BOLD
-                ).apply {
-                    setTextSize(
-                        TypedValue.COMPLEX_UNIT_PX,
-                        23f *
-                            resources.displayMetrics.density *
-                            min(effectiveFontScale(), 1.25f)
-                    )
-                },
-                matchWrap()
-            )
-            addView(
-                text(
-                    "${event.tournament} • ${event.region}",
-                    12.5f,
-                    Color.rgb(219, 229, 226)
-                ),
-                matchWrap(top = 5)
-            )
-            addView(
-                text(
-                    TimeBridgeEngine.formatEventTime(
-                        event = event,
-                        selectedZone = state.selectedRegionalZone,
-                        referenceMillis = now
-                    ),
-                    13.5f,
-                    Color.WHITE,
-                    Typeface.BOLD
-                ),
-                matchWrap(top = 5)
-            )
-            event.providerStatus?.let { status ->
-                addView(
-                    text(
-                        "Статус: $status",
-                        12f,
-                        Color.rgb(142, 232, 207),
-                        Typeface.BOLD
-                    ),
-                    matchWrap(top = 3)
-                )
-            }
-        }
         val frame = imageFrame().apply {
-            minimumHeight = dp(180)
+            minimumHeight = dp(190)
             addView(
                 ImageView(this@MainActivity).apply {
                     setImageResource(event.imageRes)
@@ -14473,28 +14407,68 @@ class MainActivity : Activity() {
                     topMargin = dp(14)
                 }
             )
+            addView(
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(14), dp(78), dp(14), dp(14))
+                    addView(
+                        text(
+                            event.match,
+                            23f,
+                            Color.WHITE,
+                            Typeface.BOLD
+                        ).apply {
+                            setTextSize(
+                                TypedValue.COMPLEX_UNIT_PX,
+                                23f *
+                                    resources.displayMetrics.density *
+                                    min(effectiveFontScale(), 1.25f)
+                            )
+                        }
+                    )
+                    addView(
+                        text(
+                            "${event.tournament} • ${event.region}",
+                            12.5f,
+                            Color.rgb(219, 229, 226)
+                        ),
+                        matchWrap(top = 5)
+                    )
+                    addView(
+                        text(
+                            TimeBridgeEngine.formatEventTime(
+                                event = event,
+                                selectedZone = state.selectedRegionalZone,
+                                referenceMillis = now
+                            ),
+                            13.5f,
+                            Color.WHITE,
+                            Typeface.BOLD
+                        ),
+                        matchWrap(top = 5)
+                    )
+                    event.providerStatus?.let { status ->
+                        addView(
+                            text(
+                                "Статус: $status",
+                                12f,
+                                Color.rgb(142, 232, 207),
+                                Typeface.BOLD
+                            ),
+                            matchWrap(top = 3)
+                        )
+                    }
+                },
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM
+                )
+            )
         }
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(
-                frame,
-                matchFixed(132)
-            )
-            addView(
-                eventDetails.apply {
-                    background = rounded(
-                        AppColors.field,
-                        8
-                    )
-                    setPadding(
-                        dp(16),
-                        dp(14),
-                        dp(16),
-                        dp(14)
-                    )
-                },
-                matchWrap(top = 6)
-            )
+            addView(frame, matchWrap())
             feedTimelineExplanationBand(
                 event = event,
                 now = now,

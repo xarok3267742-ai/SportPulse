@@ -47,13 +47,13 @@ class DecisionDeskDisclosureInstrumentationTest {
     fun overviewLeadsToOneFocusedWorkspaceAndRemembersDisclosure() {
         clickText("Штаб")
 
-        assertTextPresent("ЗАМЫСЕЛ • 0/3")
-        assertTextPresent("Замысел ещё не проверяем")
+        assertTextPresent("ВОПРОСЫ • 0/3")
+        assertTextPresent("Идея ещё не проверена")
         assertTextPresent("Карта данных")
         assertTextAbsent("Рабочая форма")
         assertTextAbsent("Развилка матча")
 
-        clickText("Сформулировать тезис")
+        clickText("Записать идею матча")
         assertTextPresent("Рабочая форма")
         assertTextPresent("Развилка матча")
         assertEventuallyFocusedInput()

@@ -49,7 +49,7 @@ class PulseWorkspaceControlsInstrumentationTest {
         clickText("Штаб")
 
         assertVerticalOrder(
-            firstText = "Сформулировать тезис",
+            firstText = "Записать идею матча",
             firstMustBeClickable = true,
             secondText = "Глубина разбора",
             thirdText = "Статус источников, а не шанс победы"

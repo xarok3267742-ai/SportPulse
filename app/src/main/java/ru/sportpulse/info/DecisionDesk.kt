@@ -21,11 +21,20 @@ internal enum class DecisionDeskSection(
 
 internal enum class DecisionDeskField(
     val title: String,
+    val actionObject: String,
     val actionTitle: String
 ) {
-    THESIS("тезис", "Сформулировать тезис"),
-    COUNTERARGUMENT("контраргумент", "Записать контраргумент"),
-    STOP_CONDITION("условие отмены", "Задать условие отмены")
+    THESIS("идея матча", "идею матча", "Записать идею матча"),
+    COUNTERARGUMENT(
+        "главное возражение",
+        "главное возражение",
+        "Записать возражение"
+    ),
+    STOP_CONDITION(
+        "условие отказа",
+        "условие отказа",
+        "Задать условие отказа"
+    )
 }
 
 internal enum class DecisionDeskStatus(
@@ -234,8 +243,9 @@ internal object DecisionDeskEngine {
                 draft = draft,
                 market = market,
                 counterView = counterView,
-                headline = "Замысел ещё не проверяем",
-                explanation = "Заполните ${firstMissing.title}: без этого вывод нельзя проверить после матча.",
+                headline = "Идея ещё не проверена",
+                explanation =
+                    "Запишите ${firstMissing.actionObject}: без этого после матча нельзя честно сравнить ожидание с фактом.",
                 actionTitle = firstMissing.actionTitle
             )
         }
@@ -275,9 +285,10 @@ internal object DecisionDeskEngine {
                 draft = draft,
                 market = market,
                 counterView = counterView,
-                headline = "Контрфакт сломал тезис",
-                explanation = "Не подгоняйте исходный тезис. Зафиксируйте стоп или сформулируйте новый замысел.",
-                actionTitle = "Пересобрать тезис"
+                headline = "Факт опроверг исходную идею",
+                explanation =
+                    "Не подгоняйте ожидание под результат. Зафиксируйте отказ или запишите новую идею.",
+                actionTitle = "Записать новую идею"
             )
         }
         if (counterView.defensibleVerdict == SignalVerdict.SKIP) {
@@ -290,7 +301,7 @@ internal object DecisionDeskEngine {
                 headline = "Проверка пока не выдержана",
                 explanation = factor?.let {
                     "Следующий обязательный шаг: проверить альтернативную трактовку фактора «${it.title}»."
-                } ?: "Фактическая опора тезиса пока ниже безопасной границы.",
+                } ?: "Проверенных фактов пока недостаточно для решения.",
                 actionTitle = factor?.let {
                     "Проверить: ${it.shortTitle}"
                 } ?: "Открыть подробную проверку"
@@ -307,7 +318,7 @@ internal object DecisionDeskEngine {
                 draft = draft,
                 market = market,
                 counterView = counterView,
-                headline = "Тезис стоит наблюдения",
+                headline = "Идею стоит наблюдать",
                 explanation = factor?.let {
                     "До фиксации не хватает проверки фактора «${it.title}»."
                 } ?: "Факты расходятся: не повышайте статус, пока спор не разрешён.",
@@ -321,7 +332,7 @@ internal object DecisionDeskEngine {
             draft = draft,
             market = market,
             counterView = counterView,
-            headline = "Замысел выдержал проверку",
+            headline = "Идея выдержала проверку",
             explanation = "Критические факторы свежие, а альтернативная версия проверена. Это готовность данных, не прогноз исхода.",
             actionTitle = "Зафиксировать в журнале"
         )

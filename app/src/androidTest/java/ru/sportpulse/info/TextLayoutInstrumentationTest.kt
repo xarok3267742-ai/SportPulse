@@ -269,13 +269,14 @@ class TextLayoutInstrumentationTest {
         clickText("Показать ещё 1")
         audit("Лента / Пульс обновления", failures)
         clickTab("Штаб")
-        assertTextPresent("Замысел ещё не проверяем")
-        assertTextPresent("ЗАМЫСЕЛ • 0/3")
+        assertTextPresent("Идея ещё не проверена")
+        assertTextPresent("ВОПРОСЫ • 0/3")
+        assertContentDescriptionStartingWith("Три шага проверки")
         assertTextPresent("Карта данных")
         assertTextAbsent("Что изменилось?")
         assertTextAbsent("Развилка матча")
         audit("Штаб / Краткое табло", failures)
-        clickText("Сформулировать тезис")
+        clickText("Записать идею матча")
         assertTextPresent("Рабочая форма")
         assertTextPresent("Что изменилось?")
         assertTextPresent("Развилка матча")
@@ -408,7 +409,7 @@ class TextLayoutInstrumentationTest {
         )
 
         clickTab("Штаб")
-        clickText("Сформулировать тезис")
+        clickText("Записать идею матча")
         assertAdaptiveGroupContained(
             AdaptiveGroupTags.DECISION_MARKETS,
             expectedChildren = MarketKind.entries.size

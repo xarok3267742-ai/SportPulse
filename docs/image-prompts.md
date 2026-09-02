@@ -792,3 +792,24 @@ Avoid: cyberpunk neon, floating holograms, gradients, bokeh blobs, dark unreadab
 ```
 
 Generated with the built-in image generation tool using `api_update_pulse.jpg`, `product_tour_route_v3110.jpg` and `decision_gate_v350.jpg` as material and workflow references. The selected output was optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/source_readiness_v3120.jpg`. Source, freshness and boundary remain distinct in the compact mobile crop; all status copy is native Android text.
+
+## Decision preflight
+
+```text
+Use case: productivity-visual
+Asset type: compact wide 16:9 image header for the pre-match decision checkpoint in the Sport Pulse Android sports-analysis application
+Primary request: create an original, immediately readable physical three-question checkpoint that helps a novice move from an initial match idea to a falsification test and then to a clear stop condition; this is critical-thinking equipment, never a prediction or betting recommendation
+Input images: Image 1 is a reference for the product's matte graphite hardware, restrained cyan/red signals, and premium top-down photography; Image 2 is a reference for the product's evidence-fork logic and real stadium operations context. Keep the material language but do not copy either composition.
+Scene/backdrop: top-down sports newsroom workbench beside a real football tactics room, with a narrow, sharply rendered glimpse of the pitch at the far edge
+Subject: exactly three distinct tactile stations connected left to right by exactly one thin cyan evidence rail: first one clear glass idea tray containing a single blank tactical card, second one optical contradiction chamber with two opposing transparent plates and one small amber inspection light, third one solid red stop gate where the cyan rail visibly ends; all three stations must be equally legible and physically separate
+Narrative: station one means what you expect, station two means what could prove it wrong, station three means the observable fact that ends the idea; the line must end at the gate and never continue toward a score, reward, or outcome
+Style/medium: premium photorealistic editorial product photography, realistic industrial design, quiet sports newsroom aesthetic
+Composition/framing: wide 16:9; all three stations centered in one horizontal middle band, evenly spaced, fully visible, crop-safe for a mobile header near 3:1; keep the lower-left and lower-center slightly darker and low-detail for native white Android copy while preserving clear hardware silhouettes
+Lighting/mood: neutral stadium spill light, crisp local contrast, calm, rigorous, trustworthy, non-promotional
+Color palette: balanced charcoal graphite, neutral white paper, clear glass, natural field green, restrained cyan, one small amber signal, one controlled safety red; no purple and no orange dominance
+Materials/textures: matte anodized metal, optical glass, clear polycarbonate, fine paper fibers, subtle wear, real pitch texture
+Constraints: exactly three stations, exactly one cyan rail, exactly one amber inspection light, exactly one red stop gate; no readable text, no letters, no numbers, no icons, no logos, no team crests, no scores, no odds, no percentages, no money, no betting slips, no casino objects, no people, no hands, no phone, no UI mockup, no watermark; hardware must remain sharp and inspectable
+Avoid: cyberpunk neon, floating holograms, decorative charts, gradient background, bokeh blobs, marketing hero, trophy, celebration, duplicated modules, clutter, pseudo-text, dark unreadable center, blurred primary hardware
+```
+
+Generated with the built-in image generation tool using `decision_gate_v350.jpg` and `scenario_fork.jpg` as material and workflow references. The selected output was optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/decision_preflight_v3130.jpg`. The three physical stations remain distinct after the compact mobile crop; all status, progress and action copy is native Android text.
