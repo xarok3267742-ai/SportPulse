@@ -6,6 +6,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.View
 import android.view.ViewGroup
 import android.view.inspector.WindowInspector
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -44,6 +45,7 @@ class ProductTourLayoutInstrumentationTest {
     fun everyStepKeepsNavigationVisibleWithoutTextClipping() {
         val failures = mutableListOf<String>()
         audit("Подтверждение возраста", failures)
+        assertAgeGateHeader()
         assertCompletelyVisible("Мне есть 18 лет")
         assertCompletelyVisible("Выйти")
         clickText("Мне есть 18 лет")
@@ -124,6 +126,70 @@ class ProductTourLayoutInstrumentationTest {
         }
     }
 
+    private fun assertAgeGateHeader() {
+        scenario.onActivity { activity ->
+            val roots = windowRoots(activity).toList()
+            val image = roots.asSequence()
+                .flatMap(::descendants)
+                .filterIsInstance<ImageView>()
+                .firstOrNull {
+                    it.contentDescription?.toString() ==
+                        AGE_IMAGE_DESCRIPTION
+                }
+                ?: error("Age gate image is missing")
+            val label = roots.asSequence()
+                .flatMap(::descendants)
+                .filterIsInstance<TextView>()
+                .first { it.text.toString() == "ТОЛЬКО 18+" }
+            val warning = roots.asSequence()
+                .flatMap(::descendants)
+                .filterIsInstance<TextView>()
+                .first {
+                    it.text.toString() ==
+                        "Нет 18 лет — выберите «Выйти»."
+                }
+            val title = roots.asSequence()
+                .flatMap(::descendants)
+                .filterIsInstance<TextView>()
+                .first { it.text.toString() == "Подтвердите возраст" }
+            val labelBounds = visibleBounds(label)
+            val warningBounds = visibleBounds(warning)
+            val imageBounds = visibleBounds(image)
+            val titleBounds = visibleBounds(title)
+            assertTrue(
+                "Age label overlaps the warning: " +
+                    "$labelBounds and $warningBounds",
+                labelBounds.bottom <= warningBounds.top
+            )
+            assertTrue(
+                "Age warning overlaps the image: " +
+                    "$warningBounds and $imageBounds",
+                warningBounds.bottom <= imageBounds.top
+            )
+            assertTrue(
+                "Age image overlaps the title: " +
+                    "$imageBounds and $titleBounds",
+                imageBounds.bottom <= titleBounds.top
+            )
+        }
+    }
+
+    private fun visibleBounds(view: View): Rect {
+        return Rect().also { bounds ->
+            assertTrue(
+                "View is outside the window: " +
+                    (view.contentDescription ?: view.javaClass.simpleName),
+                view.getGlobalVisibleRect(bounds)
+            )
+            assertTrue(
+                "View is clipped: " +
+                    (view.contentDescription ?: view.javaClass.simpleName),
+                bounds.width() >= view.width - TOLERANCE_PX &&
+                    bounds.height() >= view.height - TOLERANCE_PX
+            )
+        }
+    }
+
     private fun audit(
         screen: String,
         failures: MutableList<String>
@@ -193,5 +259,7 @@ class ProductTourLayoutInstrumentationTest {
 
     private companion object {
         const val TOLERANCE_PX = 2
+        const val AGE_IMAGE_DESCRIPTION =
+            "Порог 18+: закрытый доступ к инструментам проверки спортивных данных"
     }
 }

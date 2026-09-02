@@ -22537,6 +22537,11 @@ class MainActivity : Activity() {
 
     private fun showAgeGate() {
         lateinit var dialog: AlertDialog
+        val imageHeight = when {
+            effectiveFontScale() >= 1.8f -> 72
+            effectiveFontScale() >= 1.3f -> 84
+            else -> 96
+        }
         val contentPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(20), dp(22), dp(12))
@@ -22546,6 +22551,32 @@ class MainActivity : Activity() {
                     AppColors.dangerSoft,
                     AppColors.danger
                 )
+            )
+            addView(
+                text(
+                    "Нет 18 лет — выберите «Выйти».",
+                    13.5f,
+                    AppColors.danger,
+                    Typeface.BOLD
+                ).apply {
+                    background = rounded(AppColors.dangerSoft, 8)
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                },
+                matchWrap(top = 10)
+            )
+            addView(
+                imageFrame().apply {
+                    addView(
+                        ImageView(this@MainActivity).apply {
+                            setImageResource(R.drawable.age_gate_v3100)
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                            contentDescription =
+                                "Порог 18+: закрытый доступ к инструментам проверки спортивных данных"
+                        },
+                        frameMatch()
+                    )
+                },
+                matchFixed(imageHeight, top = 10)
             )
             addView(
                 text(
@@ -22563,18 +22594,6 @@ class MainActivity : Activity() {
                     AppColors.ink
                 ),
                 matchWrap(top = 9)
-            )
-            addView(
-                text(
-                    "Если вам нет 18 лет, закройте приложение.",
-                    13.5f,
-                    AppColors.danger,
-                    Typeface.BOLD
-                ).apply {
-                    background = rounded(AppColors.dangerSoft, 8)
-                    setPadding(dp(12), dp(10), dp(12), dp(10))
-                },
-                matchWrap(top = 12)
             )
         }
         val actions = LinearLayout(this).apply {

@@ -733,3 +733,23 @@ Avoid: athlete collage, generic dashboard, marketing hero, cyberpunk, decorative
 ```
 
 Generated with the built-in image generation tool from the prior multi-sport atmosphere and the product's graphite evidence hardware references, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/matchday_briefing_v390.jpg`. The dark left safe zone carries the briefing copy while three physical lanes remain legible in the compact center crop.
+
+## Age gate
+
+```text
+Use case: stylized-concept
+Asset type: compact horizontal image header inside a non-dismissible adult age confirmation dialog for an Android sports-analysis application
+Primary request: create an original visual threshold that clearly communicates restricted entry before sports-data tools, without excitement, temptation, reward, or gambling imagery
+Input images: Image 1 is a reference for one tactile graphite safety gate and restrained red/teal signals; Image 2 is a reference for the product's current matchday operations materials, clear evidence tray, lighting, and quiet editorial tone. Do not copy either composition.
+Scene/backdrop: close top-down view of a dark graphite access checkpoint at the entrance to a sports analysis room; beyond the checkpoint, only a restrained glimpse of a real football tactics desk and a small rink diagram
+Subject: exactly one sturdy horizontal red safety bar crossing one continuous cyan data rail; directly behind it is one clear polycarbonate identity checkpoint with a neutral circular verification seal left blank; the sports-analysis workspace remains visibly behind the closed boundary
+Style/medium: premium cinematic product photography, realistic industrial materials, calm sports newsroom aesthetic
+Composition/framing: wide 16:9 landscape, strong centered horizontal threshold readable after a center crop to approximately 3:1; all essential gate hardware inside the central 55 percent height and central 78 percent width; generous edge safety
+Lighting/mood: controlled stadium spill light, crisp local contrast, serious, protective, deliberate, non-promotional
+Color palette: charcoal graphite, off-white, cyan, deep teal, one restrained safety red; neutral and balanced, no purple, no orange dominance, no gradients, no neon glow
+Materials/textures: matte anodized metal, clear polycarbonate, optical glass, fine paper fibers, subtle pitch-board markings
+Constraints: exactly one access gate, exactly one red safety bar, exactly one continuous cyan data rail, exactly one blank verification seal; no words, no letters, no numbers, no 18 symbol, no logos, no team branding, no scores, no odds, no money, no betting slips, no casino objects, no people, no hands, no smartphone, no UI mockup, no watermark; do not show an open gate, prize, reward, celebration, or invitation
+Avoid: marketing hero, bouncer, ID card with fake text, padlock cliché, cyberpunk, excessive glow, clutter, duplicated barriers, dramatic danger scene, blurred primary hardware
+```
+
+Generated with the built-in image generation tool from the product's Decision gate and Matchday briefing material references, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/age_gate_v3100.jpg`. The centered closed barrier remains legible in the 96 dp standard header and its 72 dp large-text variant; all age wording remains native Android text.
