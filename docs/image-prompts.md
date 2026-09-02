@@ -693,3 +693,23 @@ Avoid: generic dashboard, neon cyberpunk, excessive glow, decorative gradients, 
 ```
 
 Generated with the built-in image generation tool from the existing Decision gate and Progressive fact receipt material references, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/decision_receipt_v370.jpg`. The three equally available routes and separate lower seal press remain readable in the 172 dp standard header and its 120 dp large-text variant.
+
+## Workspace depth
+
+```text
+Use case: stylized-concept
+Asset type: compact horizontal image marker above a two-mode control in an Android sports-analysis workspace
+Primary request: create an original physical depth selector that clearly contrasts a quick overview with a detailed evidence audit, without implying that either mode changes the underlying data
+Input images: Image 1 is a material and lighting reference for tactile graphite controls; Image 2 is a reference for clear polycarbonate evidence hardware and paper texture. Do not copy either composition.
+Scene/backdrop: close top-down view of a dark graphite sports editorial desk beside a subtle football tactics sheet
+Subject: one central tactile sliding selector with exactly two equally weighted destinations; the left destination is a broad shallow panoramic field window showing a clean whole-pitch outline, the right destination is a deep transparent inspection well containing three stacked evidence layers and a precision magnifying lens; one continuous cyan data rail passes unchanged through both destinations to communicate that only viewing depth changes
+Style/medium: premium cinematic product photography, realistic industrial materials, calm editorial sports aesthetic
+Composition/framing: wide 16:9 landscape, all important hardware within the central 75 percent, readable when cropped to a 88 dp mobile banner, strong left-versus-right distinction and generous safe margins
+Lighting/mood: controlled stadium spill light, crisp local contrast, focused and trustworthy rather than exciting
+Color palette: graphite, off-white markings, cyan data rail, deep teal confirmation accents, one restrained signal-red calibration mark; balanced and not dominated by one hue
+Materials/textures: matte anodized metal, clear polycarbonate, optical glass, fine paper fibers, subtle field-board markings
+Constraints: exactly two destinations, exactly one selector, exactly one continuous data rail, no words, no letters, no numbers, no logos, no team branding, no odds, no money, no betting slips, no casino objects, no people, no hands, no smartphone mockup, no UI text, no watermark; neither destination should appear recommended or disabled
+Avoid: generic dashboard, neon cyberpunk, decorative gradients, excessive glow, clutter, a third mode, duplicate selectors, blurred main hardware
+```
+
+Generated with the built-in image generation tool from the existing Decision gate and Progressive fact receipt material references, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/workspace_depth_v380.jpg`. The whole-field window, layered inspection well and single continuous data rail stay readable in the 96 dp standard marker and its 72 dp large-text variant.

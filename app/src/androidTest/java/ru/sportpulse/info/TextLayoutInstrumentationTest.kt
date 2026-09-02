@@ -176,6 +176,10 @@ class TextLayoutInstrumentationTest {
         audit("Лента / Требуют проверки", failures)
         clickText("Открыть короткий разбор")
         assertTextPresent("Штаб решения")
+        assertTextPresent("Глубина разбора")
+        assertContentDescriptionStartingWith(
+            "Два режима глубины: общий обзор и подробная проверка"
+        )
         assertTextPresent("Карта данных")
         assertContentDescriptionStartingWith("Схема доказательств. ")
         assertTextAndDescriptionDoNotOverlap(

@@ -107,6 +107,7 @@ class MainActivity : Activity() {
     private var pulseStoryControlsExpanded = false
     private var plainAnalyticsProtocolExpanded = false
     private var plainAnalyticsProtocolEventId: String? = null
+    private var pulseWorkspaceControlsAnchor: View? = null
     private var pulseLabNavigatorAnchor: View? = null
     private var analysisEventAnchor: View? = null
     private var decisionDeskOverviewAnchor: View? = null
@@ -7894,14 +7895,6 @@ class MainActivity : Activity() {
                 matchWrap()
             )
             addView(
-                pulseWorkspaceSwitcher(),
-                matchWrap(top = 12)
-            )
-            addView(
-                pulseWorkspacePrimer(),
-                matchWrap(top = 8)
-            )
-            addView(
                 plainAnalyticsProtocolPanel(
                     event = event,
                     result = result,
@@ -8797,6 +8790,58 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun pulseWorkspaceControls(): LinearLayout {
+        val imageHeight = if (effectiveFontScale() >= 1.8f) {
+            72
+        } else {
+            96
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                imageFrame().apply {
+                    addView(
+                        ImageView(this@MainActivity).apply {
+                            setImageResource(
+                                R.drawable.workspace_depth_v380
+                            )
+                            scaleType = ImageView.ScaleType.CENTER_CROP
+                            contentDescription =
+                                "Два режима глубины: общий обзор и подробная проверка. Данные остаются теми же"
+                        },
+                        frameMatch()
+                    )
+                },
+                matchFixed(imageHeight)
+            )
+            addView(
+                text(
+                    "Глубина разбора",
+                    16f,
+                    AppColors.ink,
+                    Typeface.BOLD
+                ),
+                matchWrap(top = 10)
+            )
+            addView(
+                text(
+                    "Выберите короткий итог или полный аудит. Данные не меняются.",
+                    12.5f,
+                    AppColors.muted
+                ),
+                matchWrap(top = 3)
+            )
+            addView(
+                pulseWorkspaceSwitcher(),
+                matchWrap(top = 9)
+            )
+            addView(
+                pulseWorkspacePrimer(),
+                matchWrap(top = 8)
+            )
+        }
+    }
+
     private fun pulseWorkspaceSwitcher(): LinearLayout {
         return LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -9127,7 +9172,9 @@ class MainActivity : Activity() {
         pendingPulseStoryAction = null
         renderContent()
         startAttentionTrackingIfNeeded()
-        mainScroll.scrollTo(
+        pulseWorkspaceControlsAnchor?.let { target ->
+            scrollToAppView(target, topOffsetDp = 10)
+        } ?: mainScroll.scrollTo(
             0,
             (content.top - dp(12)).coerceAtLeast(0)
         )
@@ -12431,6 +12478,7 @@ class MainActivity : Activity() {
     }
 
     private fun renderPulse() {
+        pulseWorkspaceControlsAnchor = null
         pulseLabNavigatorAnchor = null
         content.addView(
             sectionTitle(
@@ -12456,6 +12504,12 @@ class MainActivity : Activity() {
         ) {
             return
         }
+        val workspaceControls = pulseWorkspaceControls()
+        pulseWorkspaceControlsAnchor = workspaceControls
+        content.addView(
+            workspaceControls,
+            matchWrap(top = 12)
+        )
         content.addView(plainAnalyticsPanel(event), matchWrap(top = 12))
         if (
             activePulseWorkspaceMode ==
@@ -22251,7 +22305,7 @@ class MainActivity : Activity() {
                 guideStepRow(
                     number = "2",
                     title = "Прочитайте табло",
-                    body = "В «Штабе» сначала видны статус, готовность замысла, причина и одна команда. Карта данных начинается сразу под табло."
+                    body = "В «Штабе» сначала видны статус, готовность замысла, причина и одна команда. Сразу под табло выберите глубину: короткий итог или полный аудит."
                 ),
                 matchWrap(top = 10)
             )
@@ -22337,6 +22391,13 @@ class MainActivity : Activity() {
                     "Сначала показывает компактное табло: статус, заполненность замысла, причину и одно действие. Полная форма раскрывается только для редактирования; «История» и «Профиль» оценивают процесс без коэффициентов, сумм и доходности."
                 ),
                 matchWrap(top = 11)
+            )
+            addView(
+                dictionaryRow(
+                    "Глубина разбора",
+                    "«Коротко» оставляет итог, главный пробел и один следующий шаг. «Подробно» открывает навигатор маршрута, фактов и решения. Переключение не меняет оценки, источники или журнал."
+                ),
+                matchWrap(top = 9)
             )
             addView(
                 dictionaryRow(
@@ -22581,8 +22642,8 @@ class MainActivity : Activity() {
             ),
             Triple(
                 "2. Прочитайте табло",
-                "В «Штабе» сначала видны статус, готовность замысла, причина и одна команда. Карта данных начинается сразу следом.",
-                "Статус описывает качество проверки. Синяя команда — следующий шаг, а не совет сделать ставку."
+                "В «Штабе» сначала видны статус, готовность замысла, причина и одна команда. Под табло выберите короткий итог или полный аудит.",
+                "Переключатель меняет только глубину представления. Статус и синяя команда описывают проверку, а не совет сделать ставку."
             ),
             Triple(
                 "3. Откройте рабочую форму",
