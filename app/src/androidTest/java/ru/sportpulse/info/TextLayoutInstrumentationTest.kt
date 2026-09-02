@@ -7,6 +7,7 @@ import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
 import android.view.inspector.WindowInspector
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.SearchView
 import android.widget.ScrollView
@@ -325,6 +326,15 @@ class TextLayoutInstrumentationTest {
             "после открытия Решения"
         )
         assertTextPresent("Журнал решения")
+        assertTextPresent("Выберите честный итог")
+        assertTextPresent("Выберите итог")
+        assertContentDescriptionStartingWith(
+            "Три варианта решения и отдельный механизм фиксации"
+        )
+        assertLargeTextHeaderStacked(
+            title = "После свистка",
+            badge = "НУЖЕН СНИМОК"
+        )
         assertTextAbsent("Ручная оценка проверки")
         assertTextAbsent("От источника до разбора")
         audit("Пульс / Подробно / Решение", failures)
@@ -720,6 +730,33 @@ class TextLayoutInstrumentationTest {
                 it.text.toString() == title && predicate(it)
             }
             ?: error("Text control not found: $title")
+    }
+
+    private fun assertLargeTextHeaderStacked(
+        title: String,
+        badge: String
+    ) {
+        scenario.onActivity { activity ->
+            if (activity.resources.configuration.fontScale < 1.3f) {
+                return@onActivity
+            }
+            val titleView = findTextView(activity, title) { true }
+            val badgeView = findTextView(activity, badge) { true }
+            val parent = titleView.parent
+            assertTrue(
+                "$title and $badge must share one adaptive header",
+                parent === badgeView.parent
+            )
+            assertTrue(
+                "$title header must stack at large text",
+                parent is LinearLayout &&
+                    parent.orientation == LinearLayout.VERTICAL
+            )
+            assertTrue(
+                "$badge must be below $title",
+                badgeView.top >= titleView.bottom
+            )
+        }
     }
 
     private fun audit(

@@ -673,3 +673,23 @@ Constraints: no words, no letters, no numbers, no logos, no team branding, no od
 ```
 
 Generated with the built-in image generation tool, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/fact_receipt_v360.jpg`. The primary cartridge, gated optional second cartridge and sealed receipt stay readable in the short 112 dp header and its 76 dp large-text variant.
+
+## Decision receipt
+
+```text
+Use case: stylized-concept
+Asset type: compact horizontal header inside an Android sports-analysis decision journal
+Primary request: create an original physical decision receipt instrument that clearly communicates a deliberate two-stage action: first choose exactly one of three responsible outcomes, then separately seal the selected outcome into a journal
+Input images: Image 1 is a material and color-language reference for tactile graphite decision hardware; Image 2 is a reference for clear polycarbonate receipt sealing and paper texture. Do not copy either composition.
+Scene/backdrop: close top-down view of a dark graphite editorial sports-analysis desk beside a subtle football tactics sheet
+Subject: one neutral circular selector at the upper center feeds exactly three short, clearly separate mechanical paths; the left path ends at an open red stop gate, the middle path ends in a restrained amber observation loop, and the right path ends at a deep-teal verified tray; below the three paths is one separate physical seal press and a small blank paper receipt in a clear tray, visibly unsealed until the press is used
+Style/medium: premium cinematic product photography, realistic materials, industrial editorial sports aesthetic, sophisticated and calm
+Composition/framing: wide 16:9 landscape, all three outcome paths and the separate seal press centered and readable when cropped to a 112 dp mobile banner, generous safe margins, strong top-to-bottom two-stage logic
+Lighting/mood: controlled stadium spill light, crisp local contrast, deliberate and non-exciting
+Color palette: graphite, off-white paper, cyan routing accents, restrained signal red, amber, and deep teal; balanced and not dominated by one hue
+Materials/textures: matte anodized metal, clear polycarbonate, tactile selector detents, paper fibers, subtle field-board markings
+Constraints: exactly three outcome paths, exactly one selector, exactly one separate seal press, no words, no letters, no numbers, no logos, no team branding, no odds, no money, no betting slips, no casino objects, no people, no hands, no smartphone mockup, no UI text, no watermark; do not imply a recommended outcome; the three outcomes must feel equally available before selection
+Avoid: generic dashboard, neon cyberpunk, excessive glow, decorative gradients, clutter, duplicate controls, a fourth path
+```
+
+Generated with the built-in image generation tool from the existing Decision gate and Progressive fact receipt material references, optimized to a 1600 × 900 JPEG and saved as `app/src/main/res/drawable-nodpi/decision_receipt_v370.jpg`. The three equally available routes and separate lower seal press remain readable in the 172 dp standard header and its 120 dp large-text variant.

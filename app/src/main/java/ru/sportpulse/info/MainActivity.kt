@@ -116,6 +116,8 @@ class MainActivity : Activity() {
     private var decisionDistanceDraft =
         DecisionDistanceAssessment.unanswered()
     private var returnToPulseAfterDistance = false
+    private var pendingDecisionReceiptEventId: String? = null
+    private var pendingDecisionReceiptChoice: SavedDecision? = null
     private var activityResumed = false
     private var attentionTrackingStartedElapsed: Long? = null
     private var attentionTrackingStartedDay: Long? = null
@@ -19943,162 +19945,140 @@ class MainActivity : Activity() {
         onDecisionSaved: () -> Unit
     ): LinearLayout {
         val panel = card()
-        panel.addView(text("Журнал решения", 20f, AppColors.ink, Typeface.BOLD))
+        panel.addView(
+            imageFrame().apply {
+                addView(
+                    ImageView(this@MainActivity).apply {
+                        setImageResource(
+                            R.drawable.decision_receipt_v370
+                        )
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        contentDescription =
+                            "Три варианта решения и отдельный механизм фиксации квитанции"
+                    },
+                    frameMatch()
+                )
+            },
+            matchFixed(
+                if (effectiveFontScale() >= 1.8f) 120 else 172
+            )
+        )
         panel.addView(
             text(
-                "Зафиксируйте вывод до просмотра новых мнений. Это снижает влияние эмоций и результата задним числом.",
+                "Журнал решения",
+                20f,
+                AppColors.ink,
+                Typeface.BOLD
+            ),
+            matchWrap(top = 13)
+        )
+        panel.addView(
+            text(
+                "Сначала выберите итог и прочитайте, что именно будет записано. Отдельная команда создаст предстартовый снимок.",
                 13f,
                 AppColors.muted
             ),
             matchWrap(top = 5)
         )
 
-        val buttons = linkedMapOf<SavedDecision, TextView>()
-        val stackChoices = resources.configuration.fontScale >= 1.3f ||
-            resources.configuration.screenWidthDp < 380
-        val row = LinearLayout(this).apply {
-            orientation = if (stackChoices) {
-                LinearLayout.VERTICAL
-            } else {
-                LinearLayout.HORIZONTAL
-            }
-            if (!stackChoices) weightSum = 3f
+        val composerBadge = label(
+            "",
+            AppColors.signalSoft,
+            AppColors.signal
+        ).apply {
+            textSize = fixedControlTextSize(11f)
         }
-        val choices = listOf(
-            SavedDecision.SKIP to "Пропустить",
-            SavedDecision.OBSERVE to "Наблюдать",
-            SavedDecision.DATA_READY to "Факты сверены"
+        val composerHeadline = text(
+            "",
+            17f,
+            AppColors.ink,
+            Typeface.BOLD
         )
-        val savedText = text("", 12f, AppColors.muted)
-        lateinit var refresh: () -> Unit
-        choices.forEach { (decision, title) ->
-            val button = outlineButton(title, decisionColor(decision)) {
-                if (
-                    state.postEventReview(event.id)
-                        ?.isFinalized == true
-                ) {
-                    Toast.makeText(
-                        this,
-                        "Решение закрыто ретроспективой.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@outlineButton
-                }
-                val savedAt = System.currentTimeMillis()
-                val existingSnapshot =
-                    state.decisionSnapshot(event.id)
-                if (
-                    !EventStoryTiming.decisionWindowOpen(
-                        event = event,
-                        snapshot = existingSnapshot,
-                        now = savedAt
-                    )
-                ) {
-                    Toast.makeText(
-                        this,
-                        "Старт уже наступил. Новый предстартовый снимок задним числом недоступен.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@outlineButton
-                }
-                val currentCounterView = counterView()
-                if (!currentCounterView.allows(decision)) {
-                    Toast.makeText(
-                        this,
-                        "Контрракурс допускает максимум: ${
-                            decisionTitle(
-                                currentCounterView
-                                    .decisionCeiling
-                            )
-                        }.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@outlineButton
-                }
-                if (
-                    state.decisionLedger().integrity ==
-                    DecisionLedgerIntegrity.TAMPERED
-                ) {
-                    showDecisionLedgerTampered()
-                    return@outlineButton
-                }
-                val budgetChecked =
-                    AttentionBudgetPolicy.requiresBudget(
-                        decision
-                    )
-                val attentionBudget = if (budgetChecked) {
-                    flushAttentionTracking(now = savedAt)
-                } else {
-                    currentAttentionBudget(now = savedAt)
-                }
-                if (
-                    !AttentionBudgetPolicy.allows(
-                        decision = decision,
-                        budget = attentionBudget
-                    )
-                ) {
-                    startAttentionTrackingIfNeeded()
-                    showAttentionBudgetExceeded(attentionBudget)
-                    return@outlineButton
-                }
-                val distanceClearance =
-                    state.distanceClearance(savedAt)
-                if (
-                    !DecisionDistancePolicy.allows(
-                        decision = decision,
-                        clearance = distanceClearance,
-                        now = savedAt
-                    )
-                ) {
-                    if (budgetChecked) {
-                        startAttentionTrackingIfNeeded()
-                    }
-                    showDecisionDistanceRequired()
-                    return@outlineButton
-                }
-                val snapshot = state.saveDecision(
-                    eventId = event.id,
-                    eventLabel = event.match,
-                    decision = decision,
-                    assessment = assessment(),
-                    evidence = evidence(),
-                    timeline = timeline(),
-                    counterReview = counterReview(),
-                    distanceClearance = distanceClearance,
-                    savedAt = savedAt
-                )
-                if (budgetChecked) {
-                    startAttentionTrackingIfNeeded()
-                }
-                refresh()
-                onDecisionSaved()
-                Toast.makeText(
-                    this,
-                    "Снимок ${snapshot.shortFingerprint} сохранен",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }.apply {
-                if (stackChoices) {
-                    setPadding(dp(12), dp(10), dp(12), dp(10))
-                }
-            }
-            buttons[decision] = button
-            if (stackChoices) {
-                row.addView(
-                    button,
-                    matchWrap(top = if (decision == SavedDecision.SKIP) 0 else 7)
-                )
-            } else {
-                row.addView(
-                    button,
-                    LinearLayout.LayoutParams(0, dp(52), 1f).apply {
-                        if (decision != SavedDecision.DATA_READY) rightMargin = dp(6)
-                    }
-                )
-            }
+        val composerBody = text("", 12.5f, AppColors.ink)
+        val composerPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(13), dp(12), dp(13), dp(12))
+            addView(composerBadge)
+            addView(composerHeadline, matchWrap(top = 7))
+            addView(composerBody, matchWrap(top = 4))
         }
-        panel.addView(row, matchWrap(top = 13))
-        panel.addView(savedText, matchWrap(top = 9))
+        panel.addView(composerPanel, matchWrap(top = 13))
+
+        var selectedDecision = pendingDecisionReceiptChoice.takeIf {
+            pendingDecisionReceiptEventId == event.id
+        }
+        val choiceButtons = linkedMapOf<SavedDecision, RadioButton>()
+        val choiceGroup = RadioGroup(this).apply {
+            orientation = RadioGroup.VERTICAL
+        }
+        listOf(
+            Triple(
+                SavedDecision.SKIP,
+                "Пропустить",
+                "Данных недостаточно или сработало стоп-условие."
+            ),
+            Triple(
+                SavedDecision.OBSERVE,
+                "Наблюдать",
+                "Версия открыта, но сильный вывод пока не защищён."
+            ),
+            Triple(
+                SavedDecision.DATA_READY,
+                "Факты сверены",
+                "Все проверки допускают итог; это не прогноз матча."
+            )
+        ).forEachIndexed { index, (decision, title, body) ->
+            val button = decisionReceiptChoice(
+                decision = decision,
+                title = title,
+                body = body
+            )
+            choiceButtons[decision] = button
+            choiceGroup.addView(
+                button,
+                matchWrap(top = if (index == 0) 0 else 7)
+            )
+        }
+        selectedDecision?.let { choice ->
+            choiceButtons[choice]?.isChecked = true
+        }
+        panel.addView(choiceGroup, matchWrap(top = 12))
+
+        val actionButton = commandButton(
+            "Выберите итог",
+            AppColors.accent
+        ) {}.apply {
+            textSize = fixedControlTextSize(14f)
+            contentDescription = "Выберите итог перед фиксацией"
+        }
+        panel.addView(actionButton, matchWrap(top = 12))
+        val savedText = text("", 12f, AppColors.muted)
+        panel.addView(savedText, matchWrap(top = 10))
+
+        lateinit var refresh: () -> Unit
+        fun compose(
+            now: Long,
+            budget: AttentionBudgetResult =
+                currentAttentionBudget(now)
+        ): DecisionReceiptComposerResult {
+            val snapshot = state.decisionSnapshot(event.id)
+            return DecisionReceiptComposer.evaluate(
+                selectedDecision = selectedDecision,
+                reviewFinalized = state.postEventReview(event.id)
+                    ?.isFinalized == true,
+                decisionWindowOpen =
+                    EventStoryTiming.decisionWindowOpen(
+                        event = event,
+                        snapshot = snapshot,
+                        now = now
+                    ),
+                ledgerIntegrity = state.decisionLedger().integrity,
+                decisionCeiling = counterView().decisionCeiling,
+                attentionBudgetStatus = budget.status,
+                distanceClearanceValid =
+                    state.distanceClearance(now) != null
+            )
+        }
 
         refresh = {
             val now = System.currentTimeMillis()
@@ -20114,55 +20094,61 @@ class MainActivity : Activity() {
                     now = now
                 )
             val currentCounterView = counterView()
-            buttons.forEach { (decision, button) ->
-                val selected = decision == saved
+            val ledgerIntegrity = state.decisionLedger().integrity
+            val choicesEnabled =
+                !reviewFinalized &&
+                    decisionWindowOpen &&
+                    ledgerIntegrity != DecisionLedgerIntegrity.TAMPERED
+            choiceButtons.forEach { (decision, button) ->
+                val selected = decision == selectedDecision
                 val color = decisionColor(decision)
-                val allowed =
-                    currentCounterView.allows(decision)
-                val distanceRequired =
-                    DecisionDistancePolicy.requiresClearance(
-                        decision
-                    ) && state.distanceClearance() == null
-                val attentionExhausted =
-                    AttentionBudgetPolicy.requiresBudget(
-                        decision
-                    ) && currentAttentionBudget().status ==
-                    AttentionBudgetStatus.EXHAUSTED
-                button.setTextColor(if (selected) Color.WHITE else color)
+                button.setTextColor(color)
                 button.background = rippleRounded(
-                    if (selected) color else AppColors.surface,
+                    if (selected) {
+                        decisionReceiptChoiceBackground(decision)
+                    } else {
+                        AppColors.surface
+                    },
                     8,
                     color,
-                    1
+                    if (selected) 2 else 1
                 )
-                button.isEnabled =
-                    !reviewFinalized && decisionWindowOpen
-                button.alpha = when {
-                    reviewFinalized -> 0.6f
-                    !decisionWindowOpen -> 0.45f
-                    !allowed -> 0.45f
-                    attentionExhausted -> 0.6f
-                    distanceRequired -> 0.75f
-                    else -> 1f
+                button.isEnabled = choicesEnabled
+                button.alpha = if (choicesEnabled) 1f else 0.5f
+                val limit = if (
+                    decision.ordinal >
+                    currentCounterView.decisionCeiling.ordinal
+                ) {
+                    ". Выше текущего предела Контрракурса"
+                } else {
+                    ""
                 }
-                button.contentDescription = when {
-                    !decisionWindowOpen ->
-                        "${decisionTitle(decision)}. Недоступно: старт уже наступил."
-                    !allowed ->
-                        "${decisionTitle(decision)}. Недоступно: " +
-                        "Контрракурс допускает максимум ${
-                            decisionTitle(
-                                currentCounterView
-                                    .decisionCeiling
-                            )
-                        }."
-                    attentionExhausted ->
-                        "${decisionTitle(decision)}. Бюджет внимания на сегодня исчерпан."
-                    distanceRequired ->
-                        "${decisionTitle(decision)}. Нужен свежий Контур дистанции."
-                    else -> decisionTitle(decision)
-                }
+                button.contentDescription =
+                    "Выбрать итог: ${decisionTitle(decision)}$limit"
             }
+            val composer = compose(now)
+            val tone = decisionReceiptTone(composer.status)
+            composerPanel.background = rounded(
+                tone.background,
+                8,
+                tone.foreground,
+                1
+            )
+            composerBadge.text = composer.badge
+            composerBadge.setTextColor(tone.foreground)
+            composerBadge.background = rounded(
+                tone.background,
+                14,
+                tone.foreground,
+                1
+            )
+            composerHeadline.text = composer.headline
+            composerHeadline.setTextColor(tone.foreground)
+            composerBody.text = composer.body
+            actionButton.text = composer.actionTitle
+            actionButton.isEnabled = composer.canAct
+            actionButton.alpha = if (composer.canAct) 1f else 0.48f
+            actionButton.contentDescription = composer.actionTitle
             val savedAt = state.savedDecisionTime(event.id)
             val savedAboveCounterView =
                 saved != null &&
@@ -20226,8 +20212,145 @@ class MainActivity : Activity() {
                 }
             }
         }
+        choiceGroup.setOnCheckedChangeListener { _, checkedId ->
+            selectedDecision = choiceButtons.entries
+                .firstOrNull { it.value.id == checkedId }
+                ?.key
+            pendingDecisionReceiptEventId =
+                event.id.takeIf { selectedDecision != null }
+            pendingDecisionReceiptChoice = selectedDecision
+            refresh()
+        }
+        actionButton.setOnClickListener action@{
+            val decision = selectedDecision
+            val savedAt = System.currentTimeMillis()
+            val budgetChecked = decision?.let {
+                AttentionBudgetPolicy.requiresBudget(it)
+            } == true
+            val attentionBudget = if (budgetChecked) {
+                flushAttentionTracking(now = savedAt)
+            } else {
+                currentAttentionBudget(now = savedAt)
+            }
+            val composer = compose(
+                now = savedAt,
+                budget = attentionBudget
+            )
+            when (composer.action) {
+                DecisionReceiptAction.NONE -> refresh()
+                DecisionReceiptAction.SHOW_LEDGER ->
+                    showDecisionLedgerTampered()
+                DecisionReceiptAction.SHOW_ATTENTION -> {
+                    startAttentionTrackingIfNeeded()
+                    showAttentionBudgetExceeded(attentionBudget)
+                }
+                DecisionReceiptAction.OPEN_DISTANCE -> {
+                    if (budgetChecked) {
+                        startAttentionTrackingIfNeeded()
+                    }
+                    showDecisionDistanceRequired()
+                }
+                DecisionReceiptAction.COMMIT -> {
+                    val committedDecision = decision
+                        ?: return@action
+                    val distanceClearance =
+                        state.distanceClearance(savedAt)
+                    val snapshot = state.saveDecision(
+                        eventId = event.id,
+                        eventLabel = event.match,
+                        decision = committedDecision,
+                        assessment = assessment(),
+                        evidence = evidence(),
+                        timeline = timeline(),
+                        counterReview = counterReview(),
+                        distanceClearance = distanceClearance,
+                        savedAt = savedAt
+                    )
+                    if (budgetChecked) {
+                        startAttentionTrackingIfNeeded()
+                    }
+                    selectedDecision = null
+                    pendingDecisionReceiptEventId = null
+                    pendingDecisionReceiptChoice = null
+                    choiceGroup.clearCheck()
+                    refresh()
+                    onDecisionSaved()
+                    Toast.makeText(
+                        this,
+                        "Снимок ${snapshot.shortFingerprint} сохранен",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
         refresh()
         return panel
+    }
+
+    private fun decisionReceiptChoice(
+        decision: SavedDecision,
+        title: String,
+        body: String
+    ): RadioButton {
+        val value = SpannableString("$title\n$body").apply {
+            setSpan(
+                StyleSpan(Typeface.BOLD),
+                0,
+                title.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+        return RadioButton(this).apply {
+            id = View.generateViewId()
+            text = value
+            textSize = 13f
+            setTextColor(decisionColor(decision))
+            typeface = AppTypography.body(this@MainActivity)
+            buttonTintList = ColorStateList.valueOf(
+                decisionColor(decision)
+            )
+            gravity = Gravity.CENTER_VERTICAL
+            minHeight = dp(64)
+            setPadding(dp(10), dp(9), dp(10), dp(9))
+            background = rippleRounded(
+                AppColors.surface,
+                8,
+                decisionColor(decision),
+                1
+            )
+        }
+    }
+
+    private fun decisionReceiptChoiceBackground(
+        decision: SavedDecision
+    ): Int {
+        return when (decision) {
+            SavedDecision.SKIP -> AppColors.dangerSoft
+            SavedDecision.OBSERVE -> AppColors.warningSoft
+            SavedDecision.DATA_READY -> AppColors.accentSoft
+        }
+    }
+
+    private fun decisionReceiptTone(
+        status: DecisionReceiptStatus
+    ): Tone {
+        return when (status) {
+            DecisionReceiptStatus.CHOICE_REQUIRED,
+            DecisionReceiptStatus.DISTANCE_REQUIRED ->
+                Tone(AppColors.signal, AppColors.signalSoft)
+            DecisionReceiptStatus.READY_SKIP,
+            DecisionReceiptStatus.LEDGER_TAMPERED ->
+                Tone(AppColors.danger, AppColors.dangerSoft)
+            DecisionReceiptStatus.READY_OBSERVE,
+            DecisionReceiptStatus.COUNTERVIEW_LIMIT,
+            DecisionReceiptStatus.ATTENTION_EXHAUSTED ->
+                Tone(AppColors.warning, AppColors.warningSoft)
+            DecisionReceiptStatus.READY_DATA ->
+                Tone(AppColors.accentDark, AppColors.accentSoft)
+            DecisionReceiptStatus.WINDOW_CLOSED,
+            DecisionReceiptStatus.REVIEW_FINALIZED ->
+                Tone(AppColors.muted, AppColors.background)
+        }
     }
 
     private fun showAttentionBudgetExceeded(
@@ -20372,10 +20495,21 @@ class MainActivity : Activity() {
                     "АУДИТ • ${review?.answeredCount ?: 0}/5"
             }
 
+            val stackHeader =
+                resources.configuration.fontScale >= 1.3f ||
+                    resources.configuration.screenWidthDp < 380
             panel.addView(
                 LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
+                    orientation = if (stackHeader) {
+                        LinearLayout.VERTICAL
+                    } else {
+                        LinearLayout.HORIZONTAL
+                    }
+                    gravity = if (stackHeader) {
+                        Gravity.START
+                    } else {
+                        Gravity.CENTER_VERTICAL
+                    }
                     addView(
                         text(
                             "После свистка",
@@ -20383,18 +20517,29 @@ class MainActivity : Activity() {
                             AppColors.ink,
                             Typeface.BOLD
                         ),
-                        LinearLayout.LayoutParams(
-                            0,
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            1f
-                        )
+                        if (stackHeader) {
+                            wrapWrap()
+                        } else {
+                            LinearLayout.LayoutParams(
+                                0,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                1f
+                            )
+                        }
                     )
                     addView(
                         label(
                             badgeTitle,
                             tone.background,
                             tone.foreground
-                        )
+                        ),
+                        if (stackHeader) {
+                            wrapWrap().apply {
+                                topMargin = dp(8)
+                            }
+                        } else {
+                            wrapWrap()
+                        }
                     )
                 }
             )
@@ -22129,8 +22274,8 @@ class MainActivity : Activity() {
             addView(
                 guideStepRow(
                     number = "5",
-                    title = "Зафиксируйте решение",
-                    body = "Выберите «Пропустить», «Наблюдать» или «Факты сверены». Это оценка качества проверки, не прогноз и не совет сделать ставку."
+                    title = "Проверьте и зафиксируйте",
+                    body = "Сначала выберите «Пропустить», «Наблюдать» или «Факты сверены» и прочитайте будущую запись. Только отдельная команда фиксации создаёт предстартовый снимок. Это оценка качества проверки, не прогноз."
                 ),
                 matchWrap(top = 10)
             )
@@ -22253,6 +22398,13 @@ class MainActivity : Activity() {
                 dictionaryRow(
                     "Реестр фактов",
                     "Read-only сводка пяти квитанций. Считает только действующие кворумы и ставит первым повреждение, конфликт, истёкший срок или пробел. Общая SHA-256-метка меняется вместе с записью или этапом её свежести."
+                ),
+                matchWrap(top = 9)
+            )
+            addView(
+                dictionaryRow(
+                    "Квитанция решения",
+                    "Двухэтапная запись в журнал: выбор только показывает точное последствие и ничего не сохраняет. Отдельная команда повторно проверяет окно решения, Контрракурс, бюджет внимания, Контур дистанции и целостность журнала, затем создаёт предстартовый снимок."
                 ),
                 matchWrap(top = 9)
             )
@@ -22443,9 +22595,9 @@ class MainActivity : Activity() {
                 "Одинаковое происхождение не создаст кворум. Расхождение останется стоп-сигналом, а полнота проверки не означает вероятность исхода."
             ),
             Triple(
-                "5. Зафиксируйте решение",
-                "Выберите «Пропустить», «Наблюдать» или «Факты сверены». После события проверьте, какие исходные факты подтвердились, а какие нет.",
-                "Это журнал качества проверки. Приложение не рассчитывает вероятность, ожидаемую выгоду или размер ставки."
+                "5. Проверьте и зафиксируйте",
+                "Сначала выберите «Пропустить», «Наблюдать» или «Факты сверены». Прочитайте точный текст будущей записи и только затем нажмите отдельную команду фиксации.",
+                "До отдельной команды выбор не попадает в журнал. Это контроль качества проверки, а не расчёт вероятности, ожидаемой выгоды или размера ставки."
             )
         )
         val index = stepIndex.coerceIn(steps.indices)
