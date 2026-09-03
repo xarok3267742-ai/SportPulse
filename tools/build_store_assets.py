@@ -17,7 +17,7 @@ PREVIEW = OUTPUT / "preview"
 
 FEATURE_SOURCE = SOURCES / "feature-background-imagegen.png"
 PORTRAIT_SOURCE = SOURCES / "screenshot-background-imagegen.png"
-MARK_SOURCE = ROOT / "app/src/main/res/drawable-nodpi/ic_launcher_mark_v2.png"
+MARK_SOURCE = ROOT / "app/src/main/res/drawable-nodpi/ic_launcher_mark_v3.png"
 
 FIRA_BOLD = ROOT / "app/src/main/res/font/fira_sans_condensed_bold.ttf"
 FIRA_SEMIBOLD = ROOT / "app/src/main/res/font/fira_sans_condensed_semibold.ttf"

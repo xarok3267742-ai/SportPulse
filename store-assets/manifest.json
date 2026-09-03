@@ -4,7 +4,7 @@
   "generated_visual_sources": [
     "store-assets/sources/feature-background-imagegen.png",
     "store-assets/sources/screenshot-background-imagegen.png",
-    "app/src/main/res/drawable-nodpi/ic_launcher_mark_v2.png"
+    "app/src/main/res/drawable-nodpi/ic_launcher_mark_v3.png"
   ],
   "exports": [
     {
@@ -12,7 +12,7 @@
       "width": 512,
       "height": 512,
       "mode": "RGBA",
-      "bytes": 229446
+      "bytes": 240513
     },
     {
       "path": "store-assets/feature-graphic-1024x500.png",
@@ -68,7 +68,7 @@
       "width": 1920,
       "height": 1080,
       "mode": "RGB",
-      "bytes": 1582265
+      "bytes": 1583249
     }
   ]
 }

@@ -2,6 +2,22 @@
 
 Mode: built-in `image_gen`. The selected PNG outputs were resized and converted to project-local JPEG resources.
 
+## Adaptive launcher icon v3
+
+```text
+Use case: logo-brand
+Asset type: Android adaptive launcher icon foreground, transparent PNG, for "Sport Pulse", a sports-event data verification and decision-support app for Russia and CIS.
+Primary request: create a fresh, original, immediately recognizable symbol for disciplined sports-event analysis. Combine an arena aperture, a forward verification path, and one live event point. It must not look like a betting operator or a medical pulse tracker.
+Subject: one compact central mark made from two bold interlocking arena rails forming a forward-facing angular gate; one clean off-white data path passes through the gate and terminates near exactly one small signal-red event dot. The overall silhouette should suggest momentum, evidence, and a stadium without using literal sports equipment.
+Style/medium: premium flat vector-like logo rendered as crisp raster, geometric, athletic, engineered, minimal, with restrained tactile depth only.
+Composition/framing: square canvas; mark centered and fully contained within the Android adaptive-icon safe zone; every essential feature inside the central 62 percent; generous transparent margins; balanced at 48 px; no baked app-icon square, circle, border, or background.
+Color palette: vivid turquoise #28D9C5, warm off-white #F4F7F5, exactly one signal-red dot #FF4D4F. Designed to sit over graphite #071C1E, but the delivered background itself must be fully transparent.
+Constraints: true transparent background and transparent corners; exactly one red dot; no text, letters, numbers, words, logo, watermark, heart, ECG waveform, shield, trophy, coin, odds, ticket, casino imagery, ball, flame, generic lightning bolt, or standalone checkmark; no thin hairlines; no tiny details; no exterior drop shadow; robust under circle, squircle, rounded-square and teardrop Android masks.
+Avoid: medical icon, betting-house branding, crypto logo, neon cyberpunk, chrome, glassmorphism, photorealism, clutter, gradients in the canvas background.
+```
+
+Generated with the built-in image generation tool and saved unchanged as `docs/app-icon-source-v3160.png`. The production foreground was centered inside the Android safe zone and saved as `app/src/main/res/drawable-nodpi/ic_launcher_mark_v3.png`; its alpha channel was also used to create the separate monochrome themed-icon layer.
+
 ## Hero
 
 ```text
